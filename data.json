@@ -1,0 +1,675 @@
+{
+  "liuShiJiaZi": [
+    {
+      "gan": "甲",
+      "zhi": "子",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "上元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "丑",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "上元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "寅",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "上元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "卯",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "上元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "辰",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "上元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "巳",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "中元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "午",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "中元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "未",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "中元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "申",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "中元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "酉",
+      "xun": { "zhi": "子", "jun": "戊" },
+      "yuan": "中元",
+      "kong": [ "戌", "亥" ]
+    },
+    {
+      "gan": "甲",
+      "zhi": "戌",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "下元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "亥",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "下元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "子",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "下元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "丑",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "下元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "寅",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "下元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "卯",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "上元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "辰",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "上元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "巳",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "上元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "午",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "上元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "未",
+      "xun": { "zhi": "戌", "jun": "己" },
+      "yuan": "上元",
+      "kong": [ "申", "酉" ]
+    },
+    {
+      "gan": "甲",
+      "zhi": "申",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "中元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "酉",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "中元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "戌",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "中元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "亥",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "中元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "子",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "中元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "丑",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "下元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "寅",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "下元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "卯",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "下元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "辰",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "下元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "巳",
+      "xun": { "zhi": "申", "jun": "庚" },
+      "yuan": "下元",
+      "kong": [ "午", "未" ]
+    },
+    {
+      "gan": "甲",
+      "zhi": "午",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "上元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "未",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "上元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "申",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "上元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "酉",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "上元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "戌",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "上元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "亥",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "中元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "子",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "中元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "丑",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "中元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "寅",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "中元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "卯",
+      "xun": { "zhi": "午", "jun": "辛" },
+      "yuan": "中元",
+      "kong": [ "辰", "巳" ]
+    },
+    {
+      "gan": "甲",
+      "zhi": "辰",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "下元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "巳",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "下元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "午",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "下元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "未",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "下元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "申",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "下元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "酉",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "上元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "戌",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "上元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "亥",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "上元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "子",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "上元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "丑",
+      "xun": { "zhi": "辰", "jun": "壬" },
+      "yuan": "上元",
+      "kong": [ "寅", "卯" ]
+    },
+    {
+      "gan": "甲",
+      "zhi": "寅",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "中元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "乙",
+      "zhi": "卯",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "中元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "丙",
+      "zhi": "辰",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "中元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "丁",
+      "zhi": "巳",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "中元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "戊",
+      "zhi": "午",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "中元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "己",
+      "zhi": "未",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "下元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "庚",
+      "zhi": "申",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "下元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "辛",
+      "zhi": "酉",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "下元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "壬",
+      "zhi": "戌",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "下元",
+      "kong": [ "子", "丑" ]
+    },
+    {
+      "gan": "癸",
+      "zhi": "亥",
+      "xun": { "zhi": "寅", "jun": "癸" },
+      "yuan": "下元",
+      "kong": [ "子", "丑" ]
+    }
+  ],
+  "jieQiJuShu": {
+  "冬至": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 1,
+      "中元": 7,
+      "下元": 4
+    }
+  },
+  "小寒": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 2,
+      "中元": 8,
+      "下元": 5
+    }
+  },
+  "大寒": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 3,
+      "中元": 9,
+      "下元": 6
+    }
+  },
+  "立春": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 8,
+      "中元": 5,
+      "下元": 2
+    }
+  },
+  "雨水": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 9,
+      "中元": 6,
+      "下元": 3
+    }
+  },
+  "惊蛰": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 1,
+      "中元": 7,
+      "下元": 4
+    }
+  },
+  "春分": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 3,
+      "中元": 9,
+      "下元": 6
+    }
+  },
+  "清明": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 4,
+      "中元": 1,
+      "下元": 7
+    }
+  },
+  "谷雨": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 5,
+      "中元": 2,
+      "下元": 8
+    }
+  },
+  "立夏": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 4,
+      "中元": 1,
+      "下元": 7
+    }
+  },
+  "小满": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 5,
+      "中元": 2,
+      "下元": 8
+    }
+  },
+  "芒种": {
+    "yinyang": "阳遁",
+    "jv": {
+      "上元": 6,
+      "中元": 3,
+      "下元": 9
+    }
+  },
+  "夏至": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 9,
+      "中元": 3,
+      "下元": 6
+    }
+  },
+  "小暑": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 8,
+      "中元": 2,
+      "下元": 5
+    }
+  },
+  "大暑": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 7,
+      "中元": 1,
+      "下元": 4
+    }
+  },
+  "立秋": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 2,
+      "中元": 5,
+      "下元": 8
+    }
+  },
+  "处暑": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 1,
+      "中元": 4,
+      "下元": 7
+    }
+  },
+  "白露": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 9,
+      "中元": 3,
+      "下元": 6
+    }
+  },
+  "秋分": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 7,
+      "中元": 1,
+      "下元": 4
+    }
+  },
+  "寒露": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 6,
+      "中元": 9,
+      "下元": 3
+    }
+  },
+  "霜降": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 5,
+      "中元": 8,
+      "下元": 2
+    }
+  },
+  "立冬": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 6,
+      "中元": 9,
+      "下元": 3
+    }
+  },
+  "小雪": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 5,
+      "中元": 8,
+      "下元": 2
+    }
+  },
+  "大雪": {
+    "yinyang": "阴遁",
+    "jv": {
+      "上元": 4,
+      "中元": 7,
+      "下元": 1
+    }
+  }
+},
+  "tianGan": [
+    { "name": "jia", "cn": "甲", "yinyang": "阳", "wuxing": "木", "xiangyi": "" },
+    { "name": "yi", "cn": "乙", "yinyang": "阴", "wuxing": "木", "xiangyi": "" },
+    { "name": "bing", "cn": "丙", "yinyang": "阳", "wuxing": "火", "xiangyi": "" },
+    { "name": "ding", "cn": "丁", "yinyang": "阴", "wuxing": "火", "xiangyi": "" },
+    { "name": "wu", "cn": "戊", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
+    { "name": "ji", "cn": "己", "yinyang": "阴", "wuxing": "土", "xiangyi": "" },
+    { "name": "geng", "cn": "庚", "yinyang": "阳", "wuxing": "金", "xiangyi": "" },
+    { "name": "xin", "cn": "辛", "yinyang": "阴", "wuxing": "金", "xiangyi": "" },
+    { "name": "ren", "cn": "壬", "yinyang": "阳", "wuxing": "水", "xiangyi": "" },
+    { "name": "gui", "cn": "癸", "yinyang": "阴", "wuxing": "水", "xiangyi": "" }
+  ],
+  "diZhi": [
+    { "name": "zi", "cn": "子", "yinyang": "阳", "wuxing": "水", "xiangyi": "" },
+    { "name": "chou", "cn": "丑", "yinyang": "阴", "wuxing": "土", "xiangyi": "" },
+    { "name": "yin", "cn": "寅", "yinyang": "阳", "wuxing": "木", "xiangyi": "" },
+    { "name": "mao", "cn": "卯", "yinyang": "阴", "wuxing": "木", "xiangyi": "" },
+    { "name": "chen", "cn": "辰", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
+    { "name": "si", "cn": "巳", "yinyang": "阴", "wuxing": "火", "xiangyi": "" },
+    { "name": "wu", "cn": "午", "yinyang": "阳", "wuxing": "火", "xiangyi": "" },
+    { "name": "wei", "cn": "未", "yinyang": "阴", "wuxing": "土", "xiangyi": "" },
+    { "name": "shen", "cn": "申", "yinyang": "阳", "wuxing": "金", "xiangyi": "" },
+    { "name": "you", "cn": "酉", "yinyang": "阴", "wuxing": "金", "xiangyi": "" },
+    { "name": "xu", "cn": "戌", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
+    { "name": "hai", "cn": "亥", "yinyang": "阴", "wuxing": "水", "xiangyi": "" }
+  ],
+  "baMen": [
+    { "name": "xiu", "cn": "休", "yinyang": "阳", "wuxing": "水", "guxiang": 1, "xiangyi": "" },
+    { "name": "sheng", "cn": "生", "yinyang": "阳", "wuxing": "土", "guxiang": 8, "xiangyi": "" },
+    { "name": "shang", "cn": "伤", "yinyang": "阳", "wuxing": "木", "guxiang": 3, "xiangyi": "" },
+    { "name": "du", "cn": "杜", "yinyang": "阳", "wuxing": "木", "guxiang": 4, "xiangyi": "" },
+    { "name": "jing3", "cn": "景", "yinyang": "阴", "wuxing": "火", "guxiang": 9, "xiangyi": "" },
+    { "name": "si", "cn": "死", "yinyang": "阴", "wuxing": "土", "guxiang": 2, "xiangyi": "" },
+    { "name": "jing1", "cn": "惊", "yinyang": "阴", "wuxing": "金", "guxiang": 7, "xiangyi": "" },
+    { "name": "kai", "cn": "开", "yinyang": "阴", "wuxing": "金", "guxiang": 6, "xiangyi": "" }
+  ],
+  "jiuXing": [
+    { "name": "peng", "cn": "蓬", "yinyang": "阳", "wuxing": "水", "guxiang": 1, "xiangyi": "" },
+    { "name": "ren", "cn": "任", "yinyang": "阳", "wuxing": "土", "guxiang": 8, "xiangyi": "" },
+    { "name": "chong", "cn": "冲", "yinyang": "阳", "wuxing": "木", "guxiang": 3, "xiangyi": "" },
+    { "name": "fu", "cn": "辅", "yinyang": "阳", "wuxing": "木", "guxiang": 4, "xiangyi": "" },
+    { "name": "ying", "cn": "英", "yinyang": "阴", "wuxing": "火", "guxiang": 9, "xiangyi": "" },
+    { "name": "rui", "cn": "芮", "yinyang": "阴", "wuxing": "土", "guxiang": 2, "xiangyi": "" },
+    { "name": "zhu", "cn": "柱", "yinyang": "阴", "wuxing": "金", "guxiang": 7, "xiangyi": "" },
+    { "name": "xin", "cn": "心", "yinyang": "阴", "wuxing": "金", "guxiang": 6, "xiangyi": "" },
+    { "name": "qin", "cn": "禽", "yinyang": "阳", "wuxing": "土", "guxiang": 5, "xiangyi": "" }
+  ],
+  "baShen": [
+    { "name": "fu", "cn": "值符", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
+    { "name": "she", "cn": "螣蛇", "yinyang": "阴", "wuxing": "火", "xiangyi": "" },
+    { "name": "yin", "cn": "太阴", "yinyang": "阴", "wuxing": "金", "xiangyi": "" },
+    { "name": "he", "cn": "六合", "yinyang": "阳", "wuxing": "木", "xiangyi": "" },
+    { "name": "hu", "cn": "白虎", "yinyang": "阳", "wuxing": "金", "xiangyi": "" },
+    { "name": "wu", "cn": "玄武", "yinyang": "阳", "wuxing": "水", "xiangyi": "" },
+    { "name": "di", "cn": "九地", "yinyang": "阴", "wuxing": "土", "xiangyi": "" },
+    { "name": "tian", "cn": "九天", "yinyang": "阳", "wuxing": "金", "xiangyi": "" }
+  ]
+}
