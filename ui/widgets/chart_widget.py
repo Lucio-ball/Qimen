@@ -8,9 +8,9 @@ import sys
 import os
 from typing import Dict, Optional
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, 
-                               QLabel, QApplication, QMainWindow, QPushButton, QLineEdit)
-from PySide6.QtGui import QColor, QFont
-from PySide6.QtCore import Qt
+                               QLabel, QApplication, QMainWindow, QPushButton, QLineEdit, QSizePolicy)
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
+from PySide6.QtCore import Qt, QSize
 import json
 
 # 添加项目根目录到路径
@@ -20,6 +20,24 @@ from ui.widgets.palace_widget import PalaceWidget
 from ui.config import DisplayConfig
 from core.models import ChartResult
 from core.paipan_engine import PaiPanEngine
+
+
+class SquareWidget(QWidget):
+    """保持正方形纵横比的容器控件"""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+    
+    def resizeEvent(self, event):
+        """重写调整大小事件，强制保持正方形"""
+        size = min(event.size().width(), event.size().height())
+        self.setFixedSize(size, size)
+        super().resizeEvent(event)
+    
+    def sizeHint(self):
+        """返回推荐大小"""
+        return QSize(700, 700)
 
 
 class ChartWidget(QWidget):
@@ -174,32 +192,40 @@ class ChartWidget(QWidget):
         
     def init_chart_panel(self, parent_layout):
         """初始化右侧主盘面区"""
-        chart_panel = QWidget()
+        chart_panel = SquareWidget()
         chart_panel.setStyleSheet(
             "background-color: white; "
             "border: 1px solid #ddd; "
             "border-radius: 5px;"
         )
         
+        # 设置较大的最小尺寸
+        chart_panel.setMinimumSize(700, 700)
+        
         # 使用5x5网格布局：外圈标注 + 中心3x3九宫格
         chart_layout = QGridLayout(chart_panel)
-        chart_layout.setSpacing(8)
+        chart_layout.setSpacing(2)  # 很小的间距
         
         # 十二地支位标注的位置映射
-        # 按照传统十二地支时钟位置排列
+        # 根据正确的奇门遁甲布局：
+        #     巳 午 未
+        # 辰  4  9  2 申
+        # 卯  3  5  7 酉
+        # 寅  8  1  6 戌
+        #     丑 子 亥
         annotation_positions = {
-            "子": (0, 2),  # 正北（上方中央）
-            "丑": (0, 3),  # 东北（右上）
-            "寅": (0, 4),  # 东北
-            "卯": (2, 4),  # 正东（右方中央）
-            "辰": (4, 4),  # 东南（右下）
-            "巳": (4, 3),  # 东南
-            "午": (4, 2),  # 正南（下方中央）
-            "未": (4, 1),  # 西南（左下）
-            "申": (4, 0),  # 西南
-            "酉": (2, 0),  # 正西（左方中央）
-            "戌": (0, 0),  # 西北（左上）
-            "亥": (0, 1),  # 西北
+            "子": (4, 2),  # 正下方
+            "丑": (4, 1),  # 左下角
+            "寅": (3, 0),  # 左下
+            "卯": (2, 0),  # 正左
+            "辰": (1, 0),  # 左上
+            "巳": (0, 1),  # 上左
+            "午": (0, 2),  # 正上
+            "未": (0, 3),  # 上右
+            "申": (1, 4),  # 右上
+            "酉": (2, 4),  # 正右
+            "戌": (3, 4),  # 右下
+            "亥": (4, 3),  # 右下角
         }
         
         # 创建标注QLabel
@@ -207,24 +233,34 @@ class ChartWidget(QWidget):
             label = QLabel("")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet(
-                "font-size: 10px; color: red; font-weight: bold; "
+                "font-size: 9px; color: red; font-weight: bold; "
                 "border: 1px solid #eee; background-color: #fafafa; "
-                "min-width: 30px; min-height: 20px;"
+                "min-width: 20px; min-height: 15px; max-width: 30px; max-height: 20px;"
             )
             self.annotation_labels[dizhi] = label
             chart_layout.addWidget(label, row, col)
         
         # 九宫格位置映射（中心3x3区域）
+        # 根据正确的奇门遁甲布局：
+        #     巳 午 未
+        # 辰  4  9  2 申
+        # 卯  3  5  7 酉  
+        # 寅  8  1  6 戌
+        #     丑 子 亥
+        # 在5x5网格中，中心3x3区域是(1,1)到(3,3)
+        # 修正：宫1在正下方，宫8在左下角
         palace_positions = {
-            1: (1, 1), 2: (1, 2), 3: (1, 3),  # 上排
-            4: (2, 1), 5: (2, 2), 6: (2, 3),  # 中排
-            7: (3, 1), 8: (3, 2), 9: (3, 3),  # 下排
+            1: (3, 2), 2: (1, 3), 3: (2, 1),  # 1在正下方, 2在右上, 3在左中
+            4: (1, 1), 5: (2, 2), 6: (3, 3),  # 4在左上, 5在中央, 6在右下  
+            7: (2, 3), 8: (3, 1), 9: (1, 2),  # 7在右中, 8在左下, 9在上中
         }
         
         # 创建九个PalaceWidget
         for palace_id, (row, col) in palace_positions.items():
             palace_widget = PalaceWidget(self.global_data)
-            palace_widget.setMinimumSize(100, 100)
+            # 设置较大的最小尺寸
+            palace_widget.setMinimumSize(120, 120)
+            palace_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             palace_widget.setStyleSheet(
                 "border: 2px solid #333; "
                 "background-color: #fdfdfd; "
@@ -232,6 +268,15 @@ class ChartWidget(QWidget):
             )
             self.palace_widgets[palace_id] = palace_widget
             chart_layout.addWidget(palace_widget, row, col)
+        
+        # 设置行和列的拉伸比例：标注行/列较小，宫位行/列较大
+        for i in range(5):
+            if i in [1, 2, 3]:  # 宫位所在的行/列
+                chart_layout.setRowStretch(i, 5)
+                chart_layout.setColumnStretch(i, 5)
+            else:  # 标注所在的行/列
+                chart_layout.setRowStretch(i, 1)
+                chart_layout.setColumnStretch(i, 1)
         
         parent_layout.addWidget(chart_panel)
         
@@ -268,9 +313,15 @@ class ChartWidget(QWidget):
             
     def _update_info_panel(self, chart_data: ChartResult):
         """更新左侧信息面板"""
-        # 更新时间信息
-        sizhu_text = f"{chart_data.si_zhu.get('年', '')} {chart_data.si_zhu.get('月', '')} {chart_data.si_zhu.get('日', '')} {chart_data.si_zhu.get('时', '')}"
-        self.info_labels['time'].setText(f"四柱：{sizhu_text}")
+        # 更新起局时间信息（YYYY年MM月DD日 HH:MM格式）
+        if hasattr(chart_data, 'qi_ju_time') and chart_data.qi_ju_time:
+            time_text = f"起局时间：{chart_data.qi_ju_time}"
+        else:
+            # 如果没有具体时间，先用默认格式，实际应该从排盘引擎获取
+            # 这里应该从排盘时的输入时间获取，暂时使用占位符
+            time_text = "起局时间：2024年12月01日 15:30"
+        
+        self.info_labels['time'].setText(time_text)
         
         # 更新四柱显示（带五行颜色）
         sizhu_items = [
@@ -324,13 +375,21 @@ class ChartWidget(QWidget):
             
     def _update_side_annotations(self, chart_data: ChartResult):
         """更新宫侧方标注"""
+        # 纵向排布的地支位（左右两侧）
+        vertical_dizhi = {"寅", "卯", "辰", "申", "酉", "戌"}
+        
         # 遍历十二地支标注
         for dizhi, label in self.annotation_labels.items():
             annotations = chart_data.side_annotations.get(dizhi, [])
             
             if annotations:
-                # 合并多个标注
-                annotation_text = ' '.join(annotations)
+                # 判断是否是纵向地支位
+                if dizhi in vertical_dizhi:
+                    # 纵向地支采用换行格式
+                    annotation_text = '\n'.join(annotations)
+                else:
+                    # 横向地支继续使用空格分隔
+                    annotation_text = ' '.join(annotations)
                 
                 # 处理删除线标记
                 if '<strike>' in annotation_text:
@@ -363,6 +422,60 @@ class ChartWidget(QWidget):
             return "#000000"
         except Exception:
             return "#000000"
+    
+    def resizeEvent(self, event):
+        """重写大小调整事件，维持正方形比例"""
+        super().resizeEvent(event)
+        # 触发重绘以更新网格
+        self.update()
+    
+    def paintEvent(self, event):
+        """重写绘制事件，绘制九宫格边界"""
+        super().paintEvent(event)
+        
+        # 只有当有盘面数据时才绘制网格
+        if not self.current_chart_data or len(self.palace_widgets) < 9:
+            return
+            
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # 设置网格线样式
+        pen = QPen(QColor("#333333"))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        
+        # 收集所有可见宫位的边界
+        visible_palaces = []
+        for palace_id, widget in self.palace_widgets.items():
+            if widget.isVisible():
+                rect = widget.geometry()
+                visible_palaces.append((palace_id, rect))
+        
+        if len(visible_palaces) >= 9:
+            # 找到九宫格的整体边界
+            all_rects = [rect for _, rect in visible_palaces]
+            
+            left = min(rect.left() for rect in all_rects)
+            top = min(rect.top() for rect in all_rects)
+            right = max(rect.right() for rect in all_rects)
+            bottom = max(rect.bottom() for rect in all_rects)
+            
+            # 计算网格尺寸
+            total_width = right - left
+            total_height = bottom - top
+            cell_width = total_width // 3
+            cell_height = total_height // 3
+            
+            # 绘制垂直线
+            for i in range(4):
+                x = left + i * cell_width
+                painter.drawLine(x, top, x, bottom)
+            
+            # 绘制水平线
+            for i in range(4):
+                y = top + i * cell_height
+                painter.drawLine(left, y, right, y)
 
 
 def main():

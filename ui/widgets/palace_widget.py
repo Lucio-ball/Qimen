@@ -154,10 +154,7 @@ class PalaceWidget(QWidget):
             color = self._get_wuxing_color("baShen", palace_data.god)
             is_bold = False  # 八神本身不加粗
             # 始终显示完整名称
-            if palace_data.god == "符":
-                display_text = self._get_full_name("baShen", palace_data.god)
-            else:
-                display_text = palace_data.god
+            display_text = self._get_full_name("baShen", palace_data.god)
             self.param_widgets[2].set_data(display_text, config, color, is_bold)
             
         # 格子5：九星（值符星需要加粗）
@@ -209,9 +206,20 @@ class PalaceWidget(QWidget):
             完整名称，如果找不到则返回原名称
         """
         try:
-            # 特殊处理值符
-            if param_type == "baShen" and param_name == "符":
-                return "值符"
+            # 特殊处理八神简称映射
+            if param_type == "baShen":
+                bashen_map = {
+                    "符": "值符",
+                    "蛇": "螣蛇", 
+                    "阴": "太阴",
+                    "合": "六合",
+                    "虎": "白虎",
+                    "武": "玄武",
+                    "地": "九地",
+                    "天": "九天"
+                }
+                if param_name in bashen_map:
+                    return bashen_map[param_name]
             
             param_list = self.global_data.get(param_type, [])
             for item in param_list:
@@ -267,9 +275,9 @@ class PalaceWidget(QWidget):
         # 地盘干的额外显示
         if len(palace_data.earth_stems) > 1:
             for i, stem in enumerate(palace_data.earth_stems[1:], 1):
-                if i == 1 and 1 in self.param_widgets:  # 格子1
+                if i == 1 and 7 in self.param_widgets:  # 格子7（左下角）
                     color = self._get_wuxing_color("tianGan", stem)
-                    self.param_widgets[1].set_data(stem, config, color, False)
+                    self.param_widgets[7].set_data(stem, config, color, False)
                 elif i == 2 and 3 in self.param_widgets:  # 格子3
                     color = self._get_wuxing_color("tianGan", stem)
                     self.param_widgets[3].set_data(stem, config, color, False)
@@ -286,6 +294,10 @@ class PalaceWidget(QWidget):
             对应的五行颜色，如果找不到返回黑色
         """
         try:
+            # 对于八神，如果传入的是简称，先获取完整名称
+            if param_type == "baShen":
+                param_name = self._get_full_name("baShen", param_name)
+            
             # 从global_data中查询
             param_list = self.global_data.get(param_type, [])
             for item in param_list:
