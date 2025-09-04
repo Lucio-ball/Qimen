@@ -504,6 +504,37 @@ class QueryWidget(QWidget):
         # 发射后恢复友好显示格式
         self._format_time_display()
         
+    def reset_form(self):
+        """
+        重置表单到默认状态
+        
+        重置内容包括：
+        - 时间输入框重置为当前时间
+        - 出生日期重置为25年前
+        - 事由输入框清空
+        - 重新计算年命干支
+        """
+        # 1. 重置时间为当前时间
+        current_time = datetime.datetime.now()
+        current_time_str = current_time.strftime("%Y%m%d%H%M")
+        self.time_input.setText(current_time_str)
+        self._format_time_display()
+        
+        # 2. 重置出生日期为25年前
+        default_birth_date = QDate.currentDate().addYears(-25)
+        self.birth_date_edit.setDate(default_birth_date)
+        
+        # 3. 清空事由输入框
+        self.notes_edit.clear()
+        
+        # 4. 重新计算年命干支
+        self._calculate_gan_zhi()
+        
+        # 5. 清除所有控件的焦点状态
+        if hasattr(self, 'time_input') and self.time_input.is_editing():
+            self.time_input.clearFocus()
+        self.setFocus()
+        
     def focusInEvent(self, event: QFocusEvent):
         """QueryWidget获得焦点时的处理"""
         super().focusInEvent(event)

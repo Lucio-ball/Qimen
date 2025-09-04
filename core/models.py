@@ -36,7 +36,10 @@ class ChartResult:
         self.ma_xing: str = ""
         self.kong_wang: Dict[str, List[str]] = {}
         self.palaces: List[Palace] = [Palace(i) for i in range(10)] # Index 0 is unused
-        self.side_annotations: Dict[str, List[str]] = {}  # 存储12地支位的标注信息
+        # 新的结构化标注数据，每个标注携带类型信息
+        self.side_annotations: Dict[str, List[Dict[str, Union[str, bool]]]] = {}
+        # 马星冲动目标分析结果 - 修正为复数形式
+        self.maxing_chongdong_targets: List[Dict[str, str]] = []
 
     def __repr__(self) -> str:
         info_str = (

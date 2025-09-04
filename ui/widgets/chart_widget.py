@@ -6,7 +6,7 @@ ChartWidget - 奇门遁甲完整盘面显示组件
 """
 import sys
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from PySide6.QtWidgets import (QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, 
                                QLabel, QApplication, QMainWindow, QPushButton, QLineEdit, QSizePolicy)
 from PySide6.QtGui import QColor, QFont, QPainter, QPen
@@ -228,14 +228,30 @@ class ChartWidget(QWidget):
             "亥": (4, 3),  # 右下角
         }
         
-        # 创建标注QLabel
+        # 创建标注QLabel，尺寸与相邻宫位一致
         for dizhi, (row, col) in annotation_positions.items():
             label = QLabel("")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # 判断标注类型：左右/上下
+            if col == 0 or col == 4:
+                # 左右标注，高度与宫位一致，宽度较窄
+                label.setMinimumWidth(24)
+                label.setMaximumWidth(36)
+                label.setMinimumHeight(120)
+                label.setMaximumHeight(16777215)
+            elif row == 0 or row == 4:
+                # 上下标注，宽度与宫位一致，高度较窄
+                label.setMinimumHeight(24)
+                label.setMaximumHeight(36)
+                label.setMinimumWidth(120)
+                label.setMaximumWidth(16777215)
+            else:
+                # 斜角标注，设置为正方形
+                label.setMinimumSize(24, 24)
+                label.setMaximumSize(36, 36)
             label.setStyleSheet(
-                "font-size: 9px; color: red; font-weight: bold; "
+                "font-size: 10px; color: red; font-weight: bold; "
                 "border: 1px solid #eee; background-color: #fafafa; "
-                "min-width: 20px; min-height: 15px; max-width: 30px; max-height: 20px;"
             )
             self.annotation_labels[dizhi] = label
             chart_layout.addWidget(label, row, col)
@@ -269,14 +285,14 @@ class ChartWidget(QWidget):
             self.palace_widgets[palace_id] = palace_widget
             chart_layout.addWidget(palace_widget, row, col)
         
-        # 设置行和列的拉伸比例：标注行/列较小，宫位行/列较大
+        # 设置行和列的拉伸比例：边缘留白，九宫格居中
         for i in range(5):
-            if i in [1, 2, 3]:  # 宫位所在的行/列
-                chart_layout.setRowStretch(i, 5)
-                chart_layout.setColumnStretch(i, 5)
-            else:  # 标注所在的行/列
-                chart_layout.setRowStretch(i, 1)
-                chart_layout.setColumnStretch(i, 1)
+            if i == 0 or i == 4:
+                chart_layout.setRowStretch(i, 2)
+                chart_layout.setColumnStretch(i, 2)
+            else:
+                chart_layout.setRowStretch(i, 7)
+                chart_layout.setColumnStretch(i, 7)
         
         parent_layout.addWidget(chart_panel)
         
@@ -347,19 +363,22 @@ class ChartWidget(QWidget):
                 self.info_labels[f'sizhu_zhi_{index}'].setText(zhi_html)
         
         # 更新其他信息
-        self.info_labels['jieqi'].setText(chart_data.jieqi)
+        # 月令显示：如果在亥，显示为"亥月水旺"
+        jieqi_text = self._format_jieqi_display(chart_data.jieqi)
+        self.info_labels['jieqi'].setText(jieqi_text)
         
         jushu_text = f"{chart_data.ju_shu_info.get('遁', '')}{chart_data.ju_shu_info.get('局', '')}局"
         self.info_labels['jushu'].setText(jushu_text)
         
         self.info_labels['zhifu'].setText(chart_data.zhi_fu)
         self.info_labels['zhishi'].setText(chart_data.zhi_shi)
-        self.info_labels['maxing'].setText(chart_data.ma_xing)
         
-        # 空亡信息
-        ri_kong = ','.join(chart_data.kong_wang.get('日空', []))
-        shi_kong = ','.join(chart_data.kong_wang.get('时空', []))
-        kongwang_text = f"日空({ri_kong}) 时空({shi_kong})"
+        # 马星显示：如果在寅，显示为"马星在寅"
+        maxing_text = self._format_maxing_display(chart_data.ma_xing)
+        self.info_labels['maxing'].setText(maxing_text)
+        
+        # 空亡信息：时空在子显示为"子空"，日空在丑显示为"丑空"
+        kongwang_text = self._format_kongwang_display(chart_data.kong_wang)
         self.info_labels['kongwang'].setText(kongwang_text)
         
     def _update_palace_widgets(self, chart_data: ChartResult):
@@ -374,33 +393,125 @@ class ChartWidget(QWidget):
             )
             
     def _update_side_annotations(self, chart_data: ChartResult):
-        """更新宫侧方标注"""
+        """
+        更新宫侧方标注 - V2精密渲染引擎
+        
+        严格按照UI渲染业务规则附录实现的条件渲染引擎
+        """
         # 纵向排布的地支位（左右两侧）
         vertical_dizhi = {"寅", "卯", "辰", "申", "酉", "戌"}
+        
+        # 获取马星冲动目标信息（用于样式应用）
+        maxing_chongdong_targets = getattr(chart_data, 'maxing_chongdong_targets', [])
         
         # 遍历十二地支标注
         for dizhi, label in self.annotation_labels.items():
             annotations = chart_data.side_annotations.get(dizhi, [])
             
-            if annotations:
+            # B.1 基础显示控制 - 筛选可见标注
+            visible_annotations = []
+            for anno in annotations:
+                anno_type = anno.get('type', '')
+                
+                # 检查总开关
+                if ((anno_type == 'liuji' and self.config.show_liu_ji) or
+                    (anno_type == 'rumu' and self.config.show_ru_mu) or
+                    (anno_type == 'rikong' and self.config.show_ri_kong) or
+                    (anno_type == 'shikong' and self.config.show_shi_kong) or
+                    (anno_type == 'shuangkong' and (self.config.show_ri_kong or self.config.show_shi_kong)) or
+                    (anno_type == 'yueling' and self.config.show_yue_ling) or
+                    (anno_type == 'maxing' and self.config.show_ma_xing)):
+                    visible_annotations.append(anno)
+            
+            # B.2 格式化标注文本，应用精密样式控制
+            formatted_annotations = []
+            
+            # 获取马星冲动目标信息（用于马星样式应用）
+            maxing_chongdong_targets = getattr(chart_data, 'maxing_chongdong_targets', [])
+            
+            for anno in visible_annotations:
+                # 获取基础格式化文本
+                base_text = self._format_side_annotation(anno, dizhi)
+                final_text = base_text
+                
+                # 1. 月令自动填空样式（使用现有的auto_yue_ling_chong_kong配置）
+                if (self.config.auto_yue_ling_chong_kong and 
+                    anno.get('strike', False)):
+                    final_text = f"<s>{base_text}</s>"
+                
+                # 2. 马星自动冲墓、冲空样式（使用现有的auto_maxing_chong_mu_kong配置）
+                elif (self.config.auto_maxing_chong_mu_kong and
+                      maxing_chongdong_targets and
+                      self._is_maxing_target_match(anno, maxing_chongdong_targets, dizhi)):
+                    final_text = f"<s>{base_text}</s>"
+                
+                formatted_annotations.append(final_text)
+            
+            # B.3 最终渲染
+            if formatted_annotations:
+                # 检查是否包含富文本标记
+                has_rich_text = any('<s>' in text or '<strike>' in text for text in formatted_annotations)
+                
                 # 判断是否是纵向地支位
                 if dizhi in vertical_dizhi:
                     # 纵向地支采用换行格式
-                    annotation_text = '\n'.join(annotations)
+                    if has_rich_text:
+                        # 富文本模式使用HTML换行标签
+                        annotation_text = '<br>'.join(formatted_annotations)
+                    else:
+                        # 纯文本模式使用换行符
+                        annotation_text = '\n'.join(formatted_annotations)
                 else:
-                    # 横向地支继续使用空格分隔
-                    annotation_text = ' '.join(annotations)
+                    # 横向地支继续使用空格分隔（富文本和纯文本都一样）
+                    annotation_text = ' '.join(formatted_annotations)
                 
-                # 处理删除线标记
-                if '<strike>' in annotation_text:
-                    # 启用富文本显示
+                # 设置文本内容和格式
+                if has_rich_text:
+                    # 启用富文本显示删除线
                     label.setText(annotation_text)
                     label.setTextFormat(Qt.TextFormat.RichText)
                 else:
                     label.setText(annotation_text)
                     label.setTextFormat(Qt.TextFormat.PlainText)
             else:
+                # 如果没有可见标注，清空QLabel
                 label.setText("")
+                label.setTextFormat(Qt.TextFormat.PlainText)
+    
+    def _is_maxing_target_match(self, anno: dict, maxing_targets: list, dizhi: str) -> bool:
+        """
+        检查标注是否匹配马星冲动目标列表中的任何一个目标
+        
+        Args:
+            anno: 标注对象
+            maxing_targets: 马星冲动目标列表
+            dizhi: 地支位置
+            
+        Returns:
+            是否匹配
+        """
+        if not maxing_targets:
+            return False
+            
+        anno_type = anno.get('type', '')
+        
+        # 检查是否匹配目标列表中的任何一个
+        for target in maxing_targets:
+            # 首先检查位置是否匹配
+            if dizhi != target.get('location_zhi'):
+                continue
+                
+            target_type = target.get('type', '')
+            
+            # 直接类型匹配
+            if anno_type == target_type:
+                return True
+            
+            # 特殊类型映射：kongwang -> shikong/rikong
+            if target_type == 'kongwang' and anno_type in ['shikong', 'rikong']:
+                return True
+        
+        return False
                 
     def _get_wuxing_color(self, param_type: str, param_name: str) -> str:
         """
@@ -423,6 +534,133 @@ class ChartWidget(QWidget):
         except Exception:
             return "#000000"
     
+    def _format_side_annotation(self, annotation: Dict[str, Union[str, bool]], dizhi: str) -> str:
+        """
+        格式化侧方标注显示内容（V2版本 - 纯文本格式化）
+        
+        Args:
+            annotation: 包含type、text等字段的字典
+            dizhi: 地支名称
+            
+        Returns:
+            格式化后的纯文本（不包含样式标记）
+        """
+        annotation_type = annotation.get("type", "")
+        text = annotation.get("text", "")
+        
+        # 格式化基础文本 - 支持英文和中文类型名称
+        if annotation_type in ["空亡", "rikong", "shikong"]:
+            return f"{dizhi}空"
+        elif annotation_type == "shuangkong":
+            # 双空类型直接使用text字段（引擎已经格式化好了）
+            return text if text else f"双{dizhi}空"
+        elif annotation_type in ["马星", "maxing"]:
+            return f"马星在{dizhi}"
+        elif annotation_type in ["月令", "yueling"]:
+            # 根据地支确定五行
+            dizhi_wuxing = {
+                "子": "水", "亥": "水",
+                "寅": "木", "卯": "木",
+                "巳": "火", "午": "火",
+                "申": "金", "酉": "金",
+                "辰": "土", "戌": "土", "丑": "土", "未": "土"
+            }
+            wuxing = dizhi_wuxing.get(dizhi, "")
+            return f"{dizhi}月{wuxing}旺"
+        else:
+            # 其他标注使用原文本或类型名称
+            return text if text else annotation_type
+    
+    def _format_jieqi_display(self, jieqi):
+        """
+        格式化节气显示，如"亥月水旺"
+        
+        Args:
+            jieqi: 原始节气信息
+            
+        Returns:
+            格式化后的节气显示文本
+        """
+        if not jieqi:
+            return ""
+        
+        # 如果节气信息包含地支，添加五行信息
+        # 假设节气格式可能是"亥"、"立冬"等
+        if len(jieqi) == 1 and jieqi in "子丑寅卯辰巳午未申酉戌亥":
+            # 获取地支的五行
+            wuxing = self._get_dizhi_wuxing(jieqi)
+            if wuxing:
+                return f"{jieqi}月{wuxing}旺"
+        
+        return jieqi
+    
+    def _format_maxing_display(self, maxing):
+        """
+        格式化马星显示（信息面板中只显示地支）
+        
+        Args:
+            maxing: 原始马星信息
+            
+        Returns:
+            格式化后的马星显示文本
+        """
+        if not maxing:
+            return ""
+        
+        # 信息面板中只显示地支，不添加"马星在"前缀
+        if len(maxing) == 1 and maxing in "子丑寅卯辰巳午未申酉戌亥":
+            return maxing
+        
+        return maxing
+    
+    def _format_kongwang_display(self, kong_wang):
+        """
+        格式化空亡显示，如"日空(子，丑) 时空(寅，卯)"
+        
+        Args:
+            kong_wang: 包含日空和时空信息的字典
+            
+        Returns:
+            格式化后的空亡显示文本
+        """
+        if not kong_wang:
+            return ""
+        
+        parts = []
+        
+        # 日空处理 - 格式：日空(X，X)
+        ri_kong_list = kong_wang.get('日空', [])
+        if ri_kong_list:
+            ri_kong_text = '，'.join(ri_kong_list)  # 使用中文逗号分隔
+            parts.append(f"日空({ri_kong_text})")
+        
+        # 时空处理 - 格式：时空(X，X)
+        shi_kong_list = kong_wang.get('时空', [])
+        if shi_kong_list:
+            shi_kong_text = '，'.join(shi_kong_list)  # 使用中文逗号分隔
+            parts.append(f"时空({shi_kong_text})")
+        
+        return ' '.join(parts)
+    
+    def _get_dizhi_wuxing(self, dizhi):
+        """
+        获取地支的五行属性
+        
+        Args:
+            dizhi: 地支字符
+            
+        Returns:
+            对应的五行属性
+        """
+        try:
+            param_list = self.global_data.get("diZhi", [])
+            for item in param_list:
+                if item.get("cn") == dizhi:
+                    return item.get("wuxing", "")
+            return ""
+        except Exception:
+            return ""
+    
     def resizeEvent(self, event):
         """重写大小调整事件，维持正方形比例"""
         super().resizeEvent(event)
@@ -440,42 +678,89 @@ class ChartWidget(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # 设置网格线样式
-        pen = QPen(QColor("#333333"))
-        pen.setWidth(2)
-        painter.setPen(pen)
-        
-        # 收集所有可见宫位的边界
-        visible_palaces = []
+        # 收集所有宫位相对于ChartWidget的位置信息
+        palace_info = {}
         for palace_id, widget in self.palace_widgets.items():
             if widget.isVisible():
-                rect = widget.geometry()
-                visible_palaces.append((palace_id, rect))
+                # 获取相对于当前widget(ChartWidget)的位置
+                widget_pos = widget.mapTo(self, widget.rect().topLeft())
+                widget_size = widget.size()
+                palace_info[palace_id] = {
+                    'x': widget_pos.x(), 
+                    'y': widget_pos.y(), 
+                    'width': widget_size.width(), 
+                    'height': widget_size.height(),
+                    'right': widget_pos.x() + widget_size.width(),
+                    'bottom': widget_pos.y() + widget_size.height()
+                }
         
-        if len(visible_palaces) >= 9:
-            # 找到九宫格的整体边界
-            all_rects = [rect for _, rect in visible_palaces]
+        # 打印调试信息（可选）
+        if False and len(palace_info) >= 9:  # 设置为False关闭调试输出
+            print("\n=== 九宫格相对位置调试信息 ===")
+            for palace_id in [4, 9, 2, 3, 5, 7, 8, 1, 6]:
+                if palace_id in palace_info:
+                    info = palace_info[palace_id]
+                    print(f"宫{palace_id}: x={info['x']}, y={info['y']}, w={info['width']}, h={info['height']}")
             
-            left = min(rect.left() for rect in all_rects)
-            top = min(rect.top() for rect in all_rects)
-            right = max(rect.right() for rect in all_rects)
-            bottom = max(rect.bottom() for rect in all_rects)
+            # 按Y坐标排序找出行
+            y_positions = {}
+            for palace_id, info in palace_info.items():
+                y = info['y']
+                if y not in y_positions:
+                    y_positions[y] = []
+                y_positions[y].append(palace_id)
             
-            # 计算网格尺寸
-            total_width = right - left
-            total_height = bottom - top
-            cell_width = total_width // 3
-            cell_height = total_height // 3
+            sorted_rows = sorted(y_positions.items())
+            print("\n实际按行排列:")
+            for i, (y, palaces) in enumerate(sorted_rows):
+                palaces_by_x = sorted(palaces, key=lambda p: palace_info[p]['x'])
+                print(f"第{i+1}行(y={y}): {' '.join(map(str, palaces_by_x))}")
+        
+        # 绘制九宫格 - 使用相对坐标
+        if len(palace_info) >= 9:
+            # 设置网格线样式
+            pen = QPen(QColor("#000000"))  # 黑色
+            pen.setWidth(2)
+            painter.setPen(pen)
             
-            # 绘制垂直线
-            for i in range(4):
-                x = left + i * cell_width
-                painter.drawLine(x, top, x, bottom)
+            # 根据宫位布局确定关键坐标
+            # 4 9 2
+            # 3 5 7
+            # 8 1 6
             
-            # 绘制水平线
-            for i in range(4):
-                y = top + i * cell_height
-                painter.drawLine(left, y, right, y)
+            try:
+                # 获取九宫格的边界
+                left_edge = palace_info[4]['x']  # 宫4的左边
+                right_edge = palace_info[2]['right']  # 宫2的右边
+                top_edge = palace_info[4]['y']  # 宫4的上边
+                bottom_edge = palace_info[8]['bottom']  # 宫8的下边
+                
+                # 获取分割线位置
+                middle_x1 = palace_info[9]['x']  # 宫9的左边（第一条垂直分割线）
+                middle_x2 = palace_info[2]['x']  # 宫2的左边（第二条垂直分割线）
+                middle_y1 = palace_info[3]['y']  # 宫3的上边（第一条水平分割线）
+                middle_y2 = palace_info[8]['y']  # 宫8的上边（第二条水平分割线）
+                
+                # 关闭调试输出，保持界面清洁
+                # print(f"\n九宫格边界: left={left_edge}, right={right_edge}, top={top_edge}, bottom={bottom_edge}")
+                # print(f"分割线: x1={middle_x1}, x2={middle_x2}, y1={middle_y1}, y2={middle_y2}")
+                
+                # 绘制九宫格边框和分割线
+                # 外边框
+                painter.drawRect(left_edge, top_edge, right_edge - left_edge, bottom_edge - top_edge)
+                
+                # 垂直分割线
+                painter.drawLine(middle_x1, top_edge, middle_x1, bottom_edge)
+                painter.drawLine(middle_x2, top_edge, middle_x2, bottom_edge)
+                
+                # 水平分割线
+                painter.drawLine(left_edge, middle_y1, right_edge, middle_y1)
+                painter.drawLine(left_edge, middle_y2, right_edge, middle_y2)
+                
+            except KeyError as e:
+                print(f"绘制九宫格时缺少宫位信息: {e}")
+            except Exception as e:
+                print(f"绘制九宫格时出错: {e}")
 
 
 def main():

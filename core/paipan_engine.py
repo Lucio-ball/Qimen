@@ -1,6 +1,6 @@
 import json
 import datetime
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from .models import Palace, ChartResult
 from .calendar_utils import get_solar_term, get_si_zhu
 
@@ -90,6 +90,9 @@ class PaiPanEngine:
 
         # 步骤 10: 计算宫侧方自动标注
         result.side_annotations = self._calculate_annotations(result, di_pan_stems, tian_pan_stems)
+        
+        # 步骤 11: 分析马星冲动
+        result.maxing_chongdong_targets = self._analyze_maxing_chongdong(result)
 
         return result
 
@@ -269,29 +272,29 @@ class PaiPanEngine:
         return {"日空": ri_kong, "时空": shi_kong}
 
     def _calculate_annotations(self, result: ChartResult, di_pan_stems: List[List[str]], 
-                             tian_pan_stems: List[List[str]]) -> Dict[str, List[str]]:
+                             tian_pan_stems: List[List[str]]) -> Dict[str, List[Dict[str, Union[str, bool]]]]:
         """
-        计算宫侧方自动标注 - 精确映射版本
-        返回格式: {"子": ["日空"], "未": ["月令"], ...}
+        计算宫侧方自动标注 - 结构化版本
+        返回格式: {"子": [{"type": "liuji", "text": "戊六击", "strike": False}], ...}
         """
         # 初始化标注字典
         annotations = {zhi: [] for zhi in ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]}
         
         # 分析各种标注
-        self._analyze_liu_ji(annotations, di_pan_stems, tian_pan_stems)
-        self._analyze_ru_mu(annotations, di_pan_stems, tian_pan_stems)
-        self._analyze_kong_wang(annotations, result)
-        self._analyze_yue_wang_ma_xing(annotations, result)
+        self._analyze_liu_ji_structured(annotations, di_pan_stems, tian_pan_stems)
+        self._analyze_ru_mu_structured(annotations, di_pan_stems, tian_pan_stems)
+        self._analyze_kong_wang_structured(annotations, result)
+        self._analyze_yue_wang_ma_xing_structured(annotations, result)
         
         # 处理双标注
-        self._process_double_annotations(annotations)
+        self._process_double_annotations_structured(annotations)
         
         return annotations
     
-    def _analyze_liu_ji(self, annotations: Dict[str, List[str]], di_pan_stems: List[List[str]], 
-                       tian_pan_stems: List[List[str]]):
+    def _analyze_liu_ji_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
+                                 di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
         """
-        分析六击情况 - 精确映射：每个天干对应唯一地支位
+        分析六击情况 - 结构化版本
         精确映射: 戊→卯, 己→未, 庚→寅, 辛→午, 壬→辰, 癸→巳
         """
         liu_ji_rules = {
@@ -309,12 +312,16 @@ class PaiPanEngine:
             all_gan_list = tian_pan_stems[gong] + di_pan_stems[gong]
             
             if gan in all_gan_list:
-                annotations[target_zhi].append(f"{gan}六击")
+                annotations[target_zhi].append({
+                    "type": "liuji",
+                    "text": f"{gan}六击",
+                    "strike": False
+                })
     
-    def _analyze_ru_mu(self, annotations: Dict[str, List[str]], di_pan_stems: List[List[str]], 
-                      tian_pan_stems: List[List[str]]):
+    def _analyze_ru_mu_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
+                                di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
         """
-        分析入墓情况 - 精确映射：每个宫位对应唯一地支位
+        分析入墓情况 - 结构化版本
         精确映射: 艮8→丑, 巽4→辰, 坤2→未, 乾6→戌
         """
         ru_mu_rules = {
@@ -331,44 +338,62 @@ class PaiPanEngine:
             
             for gan in all_gan_list:
                 if gan in gan_list:
-                    annotations[target_zhi].append(f"{gan}入墓")
+                    annotations[target_zhi].append({
+                        "type": "rumu",
+                        "text": f"{gan}入墓",
+                        "strike": False
+                    })
     
-    def _analyze_kong_wang(self, annotations: Dict[str, List[str]], result: ChartResult):
+    def _analyze_kong_wang_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
+                                    result: ChartResult):
         """
-        分析空亡情况
-        月令空亡用<strike>标签标识
+        分析空亡情况 - 结构化版本
+        月令空亡用strike标识
         """
         yue_zhi = result.si_zhu['月'][1]  # 获取月支
         
         # 检查日空
         for kong_zhi in result.kong_wang.get('日空', []):
-            if kong_zhi == yue_zhi:
-                annotations[kong_zhi].append("<strike>日空</strike>")
-            else:
-                annotations[kong_zhi].append("日空")
+            is_strike = kong_zhi == yue_zhi
+            annotations[kong_zhi].append({
+                "type": "rikong",
+                "text": "日空",
+                "strike": is_strike
+            })
         
         # 检查时空
         for kong_zhi in result.kong_wang.get('时空', []):
-            if kong_zhi == yue_zhi:
-                annotations[kong_zhi].append("<strike>时空</strike>")
-            else:
-                annotations[kong_zhi].append("时空")
+            is_strike = kong_zhi == yue_zhi
+            annotations[kong_zhi].append({
+                "type": "shikong", 
+                "text": "时空",
+                "strike": is_strike
+            })
     
-    def _analyze_yue_wang_ma_xing(self, annotations: Dict[str, List[str]], result: ChartResult):
+    def _analyze_yue_wang_ma_xing_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
+                                           result: ChartResult):
         """
-        分析月旺与马星 - 精确映射：只标注到对应地支本身
+        分析月旺与马星 - 结构化版本
         """
         # 月令旺气 - 只标注月支本身
         yue_zhi = result.si_zhu['月'][1]
-        annotations[yue_zhi].append("月令")
+        annotations[yue_zhi].append({
+            "type": "yueling",
+            "text": "月令",
+            "strike": False
+        })
         
         # 马星 - 只标注马星地支本身
         if result.ma_xing:
-            annotations[result.ma_xing].append("马星")
+            annotations[result.ma_xing].append({
+                "type": "maxing",
+                "text": "马星",
+                "strike": False
+            })
     
-    def _process_double_annotations(self, annotations: Dict[str, List[str]]):
+    def _process_double_annotations_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]]):
         """
-        处理双标注，将重复的标注合并为"双X..."格式
+        处理双标注，将重复的标注合并为"双X..."格式 - 结构化版本
         特别处理日空+时空的情况，合并为"双X空"格式（包含地支名）
         """
         for di_zhi in annotations:
@@ -376,45 +401,139 @@ class PaiPanEngine:
             if len(annotation_list) <= 1:
                 continue
                 
-            # 统计每种标注的出现次数
-            annotation_count = {}
+            # 统计每种类型的标注
+            type_count = {}
             for annotation in annotation_list:
-                annotation_count[annotation] = annotation_count.get(annotation, 0) + 1
+                ann_type = annotation["type"]
+                type_count[ann_type] = type_count.get(ann_type, 0) + 1
             
             # 特殊处理日空+时空的情况
-            has_ri_kong = "日空" in annotation_list
-            has_shi_kong = "时空" in annotation_list
-            has_ri_kong_strike = "<strike>日空</strike>" in annotation_list
-            has_shi_kong_strike = "<strike>时空</strike>" in annotation_list
+            has_ri_kong = any(ann["type"] == "rikong" for ann in annotation_list)
+            has_shi_kong = any(ann["type"] == "shikong" for ann in annotation_list)
             
             # 重新构建标注列表
             new_annotations = []
             processed_kong = False
             
-            for annotation, count in annotation_count.items():
+            for annotation in annotation_list:
+                ann_type = annotation["type"]
+                
                 # 处理空亡的双标注
-                if annotation in ["日空", "时空", "<strike>日空</strike>", "<strike>时空</strike>"]:
-                    if not processed_kong:
-                        # 计算总的空亡数量
-                        total_kong = 0
-                        if has_ri_kong: total_kong += 1
-                        if has_shi_kong: total_kong += 1
-                        if has_ri_kong_strike: total_kong += 1
-                        if has_shi_kong_strike: total_kong += 1
-                        
-                        if total_kong >= 2:
-                            # 检查是否有删除线标注
-                            if has_ri_kong_strike or has_shi_kong_strike:
-                                new_annotations.append(f"<strike>双{di_zhi}空</strike>")
-                            else:
-                                new_annotations.append(f"双{di_zhi}空")
-                        else:
-                            new_annotations.append(annotation)
+                if ann_type in ["rikong", "shikong"] and not processed_kong:
+                    if has_ri_kong and has_shi_kong:
+                        # 检查是否有删除线标注
+                        has_strike = any(ann["strike"] for ann in annotation_list 
+                                       if ann["type"] in ["rikong", "shikong"])
+                        new_annotations.append({
+                            "type": "shuangkong",  # 可以定义新类型或选择其一
+                            "text": f"双{di_zhi}空",
+                            "strike": has_strike
+                        })
                         processed_kong = True
+                    else:
+                        new_annotations.append(annotation)
                 # 处理其他标注的双标注
-                elif count >= 2:
-                    new_annotations.append(f"双{annotation}")
-                else:
+                elif type_count[ann_type] >= 2:
+                    # 找到同类型的第一个标注
+                    if annotation == next(ann for ann in annotation_list if ann["type"] == ann_type):
+                        new_annotations.append({
+                            "type": ann_type,
+                            "text": f"双{annotation['text']}",
+                            "strike": annotation["strike"]
+                        })
+                elif ann_type not in ["rikong", "shikong"] or not processed_kong:
                     new_annotations.append(annotation)
             
             annotations[di_zhi] = new_annotations
+    
+    def _analyze_maxing_chongdong(self, result: ChartResult) -> List[Dict[str, str]]:
+        """
+        分析马星冲动逻辑 - V2版本
+        严格按照优先级顺序：本宫入墓 > 对宫入墓 > 本宫空亡 > 对宫空亡
+        一旦在某个步骤找到任何目标，就收集该宫位内所有同类型目标，然后立即返回
+        
+        Returns:
+            List[Dict[str, str]]: 所有被冲动的标注对象列表
+        """
+        if not result.ma_xing:
+            return []
+            
+        # A. 核心数据与映射关系
+        dui_gong_map = {1: 9, 9: 1, 2: 8, 8: 2, 3: 7, 7: 3, 4: 6, 6: 4}
+        zhi_to_gong_map = {
+            "子": 1, "丑": 8, "寅": 8, "卯": 3, "辰": 4, "巳": 4,
+            "午": 9, "未": 2, "申": 2, "酉": 7, "戌": 6, "亥": 6
+        }
+        gong_to_zhi_list_map = {
+            1: ["子"], 2: ["未", "申"], 3: ["卯"], 4: ["辰", "巳"], 5: [], 
+            6: ["戌", "亥"], 7: ["酉"], 8: ["丑", "寅"], 9: ["午"]
+        }
+        
+        # 初始化
+        ma_xing_zhi = result.ma_xing
+        ben_gong_index = zhi_to_gong_map[ma_xing_zhi]
+        dui_gong_index = dui_gong_map.get(ben_gong_index)
+        
+        # Step 1: 检查本宫入墓
+        targets = self._find_targets_in_gong(ben_gong_index, "rumu", result.side_annotations, gong_to_zhi_list_map)
+        if targets:
+            return targets
+            
+        # Step 2: 检查对宫入墓
+        if dui_gong_index is not None:
+            targets = self._find_targets_in_gong(dui_gong_index, "rumu", result.side_annotations, gong_to_zhi_list_map)
+            if targets:
+                return targets
+                
+        # Step 3: 检查本宫空亡
+        targets = self._find_targets_in_gong(ben_gong_index, ["rikong", "shikong"], result.side_annotations, gong_to_zhi_list_map)
+        if targets:
+            return targets
+            
+        # Step 4: 检查对宫空亡
+        if dui_gong_index is not None:
+            targets = self._find_targets_in_gong(dui_gong_index, ["rikong", "shikong"], result.side_annotations, gong_to_zhi_list_map)
+            if targets:
+                return targets
+                
+        # Step 5: 无目标
+        return []
+        
+    def _find_targets_in_gong(self, gong_index: int, target_types: Union[str, List[str]], 
+                             all_annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
+                             gong_to_zhi_list_map: Dict[int, List[str]]) -> List[Dict[str, str]]:
+        """
+        在指定宫位中查找匹配类型的所有标注目标
+        
+        Args:
+            gong_index: 目标宫位 (1-9)
+            target_types: 目标类型 (字符串或字符串列表)
+            all_annotations: 所有标注数据
+            gong_to_zhi_list_map: 宫位到地支列表的映射
+            
+        Returns:
+            List[Dict[str, str]]: 找到的所有目标对象列表
+        """
+        found_targets = []
+        
+        # 标准化target_types为列表
+        if isinstance(target_types, str):
+            target_types = [target_types]
+            
+        # 获取该宫位对应的所有地支列表
+        zhi_list = gong_to_zhi_list_map.get(gong_index, [])
+        
+        # 遍历该宫位的所有地支
+        for zhi in zhi_list:
+            annotations = all_annotations.get(zhi, [])
+            
+            # 遍历该地支位置的所有标注
+            for anno in annotations:
+                if anno.get('type') in target_types:
+                    found_targets.append({
+                        "type": anno.get('type'),
+                        "location_zhi": zhi,
+                        "text": anno.get('text', anno.get('type', ''))
+                    })
+                    
+        return found_targets
