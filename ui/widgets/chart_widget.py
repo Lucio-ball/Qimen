@@ -333,9 +333,8 @@ class ChartWidget(QWidget):
         if hasattr(chart_data, 'qi_ju_time') and chart_data.qi_ju_time:
             time_text = f"起局时间：{chart_data.qi_ju_time}"
         else:
-            # 如果没有具体时间，先用默认格式，实际应该从排盘引擎获取
-            # 这里应该从排盘时的输入时间获取，暂时使用占位符
-            time_text = "起局时间：2024年12月01日 15:30"
+            # 如果没有起局时间信息，显示提示
+            time_text = "起局时间：未知"
         
         self.info_labels['time'].setText(time_text)
         

@@ -40,6 +40,8 @@ class ChartResult:
         self.side_annotations: Dict[str, List[Dict[str, Union[str, bool]]]] = {}
         # 马星冲动目标分析结果 - 修正为复数形式
         self.maxing_chongdong_targets: List[Dict[str, str]] = []
+        # 起局时间（用于显示）
+        self.qi_ju_time: str = ""
 
     def __repr__(self) -> str:
         info_str = (

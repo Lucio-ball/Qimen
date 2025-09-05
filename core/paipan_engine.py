@@ -39,6 +39,9 @@ class PaiPanEngine:
         内部排盘主流程
         """
         result = ChartResult()
+        
+        # 设置起局时间（用于界面显示）
+        result.qi_ju_time = target_dt.strftime("%Y年%m月%d日 %H:%M")
 
         # 步骤 1 & 2: 计算节气与四柱
         result.jieqi = get_solar_term(target_dt)
@@ -142,7 +145,7 @@ class PaiPanEngine:
 
         return -1
 
-    def _find_zhi_fu_zhi_shi(self, shi_chen_xun: Dict, di_pan_stems: List[List[str]]) -> (Dict, str, int):
+    def _find_zhi_fu_zhi_shi(self, shi_chen_xun: Dict, di_pan_stems: List[List[str]]) -> tuple[Dict, str, int]:
         jun_gan = shi_chen_xun['jun']
         fu_tou_palace = -1
         for i in range(1, 10):
@@ -188,7 +191,7 @@ class PaiPanEngine:
         return layout
 
     def _layout_tian_pan_and_stars(self, shi_gan: str, di_pan_stems: List[List[str]], zhi_fu_star: Dict,
-                                   shi_chen_xun: Dict) -> (List[List[str]], List[List[str]]):
+                                   shi_chen_xun: Dict) -> tuple[List[List[str]], List[List[str]]]:
         tian_pan_stems = [[] for _ in range(10)]
         tian_pan_stars = [[] for _ in range(10)]
 
@@ -275,7 +278,7 @@ class PaiPanEngine:
                              tian_pan_stems: List[List[str]]) -> Dict[str, List[Dict[str, Union[str, bool]]]]:
         """
         计算宫侧方自动标注 - 结构化版本
-        返回格式: {"子": [{"type": "liuji", "text": "戊六击", "strike": False}], ...}
+        返回格式: {"子": [{"type": "liuji", "text": "戊击刑", "strike": False}], ...}
         """
         # 初始化标注字典
         annotations = {zhi: [] for zhi in ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]}
@@ -294,10 +297,10 @@ class PaiPanEngine:
     def _analyze_liu_ji_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
                                  di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
         """
-        分析六击情况 - 结构化版本
+        分析击刑情况 - 结构化版本
         精确映射: 戊→卯, 己→未, 庚→寅, 辛→午, 壬→辰, 癸→巳
         """
-        liu_ji_rules = {
+        ji_xing_rules = {
             "戊": (3, "卯"),  # 震3宫 -> 卯位
             "己": (2, "未"),  # 坤2宫 -> 未位
             "庚": (8, "寅"),  # 艮8宫 -> 寅位
@@ -306,15 +309,15 @@ class PaiPanEngine:
             "癸": (4, "巳"),  # 巽4宫 -> 巳位
         }
         
-        # 检查天盘干和地盘干是否六击
-        for gan, (gong, target_zhi) in liu_ji_rules.items():
+        # 检查天盘干和地盘干是否击刑
+        for gan, (gong, target_zhi) in ji_xing_rules.items():
             # 合并天盘干和地盘干
             all_gan_list = tian_pan_stems[gong] + di_pan_stems[gong]
             
             if gan in all_gan_list:
                 annotations[target_zhi].append({
                     "type": "liuji",
-                    "text": f"{gan}六击",
+                    "text": f"{gan}击刑",
                     "strike": False
                 })
     
@@ -414,6 +417,7 @@ class PaiPanEngine:
             # 重新构建标注列表
             new_annotations = []
             processed_kong = False
+            processed_rumu = False
             
             for annotation in annotation_list:
                 ann_type = annotation["type"]
@@ -432,8 +436,39 @@ class PaiPanEngine:
                         processed_kong = True
                     else:
                         new_annotations.append(annotation)
+                # 处理入墓的双标注 - 特殊逻辑
+                elif ann_type == "rumu" and type_count[ann_type] >= 2 and not processed_rumu:
+                    # 收集所有入墓标注，按干支分组
+                    rumu_annotations = [ann for ann in annotation_list if ann["type"] == "rumu"]
+                    gan_count = {}
+                    
+                    # 统计每个干的出现次数
+                    for rumu_ann in rumu_annotations:
+                        gan = rumu_ann["text"].replace("入墓", "")
+                        gan_count[gan] = gan_count.get(gan, 0) + 1
+                    
+                    # 根据每个干的出现次数生成标注
+                    for gan, count in gan_count.items():
+                        if count >= 2:
+                            # 同一个干出现多次，用"双X入墓"
+                            text = f"双{gan}入墓"
+                        else:
+                            # 单个干，用"X入墓"
+                            text = f"{gan}入墓"
+                        
+                        # 检查是否有删除线（继承原标注的strike状态）
+                        has_strike = any(ann["strike"] for ann in rumu_annotations 
+                                       if ann["text"] == f"{gan}入墓")
+                        
+                        new_annotations.append({
+                            "type": ann_type,
+                            "text": text,
+                            "strike": has_strike
+                        })
+                    
+                    processed_rumu = True
                 # 处理其他标注的双标注
-                elif type_count[ann_type] >= 2:
+                elif type_count[ann_type] >= 2 and ann_type != "rumu":
                     # 找到同类型的第一个标注
                     if annotation == next(ann for ann in annotation_list if ann["type"] == ann_type):
                         new_annotations.append({
@@ -441,7 +476,7 @@ class PaiPanEngine:
                             "text": f"双{annotation['text']}",
                             "strike": annotation["strike"]
                         })
-                elif ann_type not in ["rikong", "shikong"] or not processed_kong:
+                elif ann_type not in ["rikong", "shikong", "rumu"] or (not processed_kong and not processed_rumu):
                     new_annotations.append(annotation)
             
             annotations[di_zhi] = new_annotations
