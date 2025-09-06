@@ -27,7 +27,7 @@ cd Qimen
 pip install -r requirements.txt
 
 # 运行主程序
-python main_integrated.py
+python run_gui.py
 ```
 
 ## 📁 项目结构

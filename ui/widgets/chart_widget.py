@@ -83,6 +83,10 @@ class ChartWidget(QWidget):
         
         self.init_ui()
         
+        # Fix for inconsistent size bug on first tab creation
+        # 设置固定尺寸确保所有新建的ChartWidget标签页大小一致
+        self.setFixedSize(1000, 800)
+        
     def init_ui(self):
         """初始化用户界面"""
         # 主布局：左右分割

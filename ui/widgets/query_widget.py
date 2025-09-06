@@ -78,11 +78,18 @@ class QueryWidget(QWidget):
     # 定义自定义信号
     query_requested = Signal(dict)
     
-    def __init__(self, parent=None):
-        """初始化QueryWidget控件"""
+    def __init__(self, parent=None, show_query_button=True):
+        """
+        初始化QueryWidget控件
+        
+        Args:
+            parent: 父组件
+            show_query_button: 是否显示内部的"立即起局"按钮，默认为True
+        """
         super().__init__(parent)
         # 设置控件可以接收焦点
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        self.show_query_button = show_query_button
         self._init_ui()
         self._connect_signals()
         
@@ -105,8 +112,9 @@ class QueryWidget(QWidget):
         # 3. 事由输入区域
         self._create_notes_section(main_layout)
         
-        # 4. 起局按钮
-        self._create_action_button(main_layout)
+        # 4. 起局按钮（可选）
+        if self.show_query_button:
+            self._create_action_button(main_layout)
         
     def _create_time_section(self, parent_layout):
         """创建时间输入区域"""
@@ -237,8 +245,9 @@ class QueryWidget(QWidget):
         # 出生日期选择器 - 日期改变时重新计算年命
         self.birth_date_edit.dateChanged.connect(self._calculate_gan_zhi)
         
-        # 起局按钮
-        self.query_btn.clicked.connect(self._emit_query_request)
+        # 起局按钮（只有在按钮存在时才连接信号）
+        if hasattr(self, 'query_btn'):
+            self.query_btn.clicked.connect(self._emit_query_request)
         
     def _reset_to_current_time(self):
         """重置时间为当前时间"""

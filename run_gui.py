@@ -1,5 +1,6 @@
 """
 快速启动脚本 - 用于开发阶段快速启动应用
+调用最新的集成版本 (IntegratedMainWindow)
 """
 import sys
 import os
@@ -9,5 +10,5 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
 if __name__ == "__main__":
-    from main import main
+    from main_integrated import main  # 调用集成版本
     main()
