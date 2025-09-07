@@ -67,7 +67,7 @@ class PalaceWidget(QWidget):
 **功能**: 初始化PalaceWidget组件
 
 **参数**:
-- `global_data`: 从data.json加载的全局数据字典，用于五行颜色查询
+- `global_data`: 从data/core_parameters.json加载的全局数据字典，用于五行颜色查询
 - `parent`: 父控件
 
 **实现逻辑**:
@@ -143,7 +143,7 @@ from core.models import Palace, ChartResult
 import json
 
 # 加载全局数据
-with open('data.json', 'r', encoding='utf-8') as f:
+with open('data/core_parameters.json', 'r', encoding='utf-8') as f:
     global_data = json.load(f)
 
 # 创建组件

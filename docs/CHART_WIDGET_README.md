@@ -108,7 +108,7 @@ annotation_positions = {
 chart_widget = ChartWidget(global_data, config)
 
 # 排盘并显示
-engine = PaiPanEngine(data_file_path='data.json')
+engine = PaiPanEngine(data_file_path='data/core_parameters.json')
 chart_result = engine.paipan("202412011530")
 chart_widget.update_chart(chart_result)
 
@@ -133,7 +133,7 @@ chart_widget.update_config(new_config)
 
 ### 间接依赖
 - `ui.widgets.parameter_widget.ParameterWidget`: 通过PalaceWidget
-- 全局数据文件 `data.json`
+- 全局数据文件 `data/core_parameters.json`
 
 ## 测试验证
 

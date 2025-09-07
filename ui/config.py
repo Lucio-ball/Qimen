@@ -3,6 +3,7 @@ UI配置相关的数据类定义
 """
 from dataclasses import dataclass
 from typing import Optional
+from PySide6.QtGui import QColor
 
 
 @dataclass
@@ -37,3 +38,39 @@ class DisplayConfig:
             raise ValueError("selected_border_width must be non-negative")
         if self.annotation_circle_radius < 0:
             raise ValueError("annotation_circle_radius must be non-negative")
+            
+    def get_wuxing_color(self, param_type: str, param_name: str) -> QColor:
+        """获取五行颜色"""
+        if not self.use_wuxing_colors:
+            return QColor(0, 0, 0)  # 黑色
+            
+        # 简化的颜色映射（在实际应用中应该从data/core_parameters.json读取）
+        wuxing_colors = {
+            "木": QColor(0, 180, 0),      # 深绿色
+            "火": QColor(255, 0, 0),      # 红色  
+            "土": QColor(139, 69, 19),    # 棕色
+            "金": QColor(255, 215, 0),    # 金黄色
+            "水": QColor(0, 0, 255),      # 蓝色
+        }
+        
+        # 简化的映射逻辑（在实际应用中应该查询data/core_parameters.json）
+        color_map = {
+            # 天干
+            "甲": "木", "乙": "木",
+            "丙": "火", "丁": "火", 
+            "戊": "土", "己": "土",
+            "庚": "金", "辛": "金",
+            "壬": "水", "癸": "水",
+            # 八神
+            "值符": "土", "腾蛇": "火", "太阴": "金", "六合": "木",
+            "白虎": "金", "玄武": "水", "九地": "土", "九天": "火",
+            # 九星
+            "天蓬": "水", "天芮": "土", "天冲": "木", "天辅": "木",
+            "天禽": "土", "天心": "金", "天柱": "金", "天任": "土", "天英": "火",
+            # 八门
+            "休门": "水", "死门": "土", "伤门": "木", "杜门": "木",
+            "开门": "金", "惊门": "金", "生门": "土", "景门": "火"
+        }
+        
+        wuxing = color_map.get(param_name, "土")  # 默认土
+        return wuxing_colors.get(wuxing, QColor(0, 0, 0))

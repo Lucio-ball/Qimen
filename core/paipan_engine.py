@@ -11,7 +11,7 @@ LUO_SHU_PATH = [1, 8, 3, 4, 9, 2, 7, 6]
 class PaiPanEngine:
     """奇门遁甲排盘引擎"""
 
-    def __init__(self, data_file_path='data.json'):
+    def __init__(self, data_file_path='data/core_parameters.json'):
         """
         构造函数，加载数据文件
         """
@@ -36,7 +36,7 @@ class PaiPanEngine:
 
     def _internal_paipan(self, target_dt: datetime.datetime) -> ChartResult:
         """
-        内部排盘主流程
+        内部排盘主流程 - 升级版本
         """
         result = ChartResult()
         
@@ -56,7 +56,7 @@ class PaiPanEngine:
         # 步骤 4: 排地盘天干
         di_pan_stems = self._layout_di_pan(result.ju_shu_info)
 
-        # 步骤 5: 确定值符值使
+        # 步骤 5: 确定直符值使
         result.shi_chen_xun = self._find_shi_chen_xun(shi_zhu[0], shi_zhu[1])
         zhi_fu_star, result.zhi_shi, fu_tou_palace = self._find_zhi_fu_zhi_shi(result.shi_chen_xun, di_pan_stems)
         result.zhi_fu = zhi_fu_star['cn']
@@ -71,31 +71,56 @@ class PaiPanEngine:
         # 步骤 8: 排八门
         ba_men_layout = self._layout_ba_men(shi_zhu[1], result.shi_chen_xun['zhi'], result.zhi_shi, result.ju_shu_info)
 
-        # 步骤 9: 整合结果
+        # 步骤 9: 计算天乙
+        result.tian_yi = self._calculate_tian_yi(zhi_fu_star, tian_pan_stars)
+
+        # 步骤 10: 整合结果
         result.ma_xing = self._find_ma_xing(shi_zhu[1])
         result.kong_wang = self._find_kong_wang(ri_zhu, shi_zhu)
 
-        # 填充九宫信息
+        # 填充九宫信息 - 新的数据模型
         palace_wuxing = {1: '水', 2: '土', 3: '木', 4: '木', 6: '金', 7: '金', 8: '土', 9: '火', 5: '土'}
-        original_stars = {p['guxiang']: p['cn'] for p in self.data['jiuXing']}
-        original_gates = {p['guxiang']: p['cn'] for p in self.data['baMen']}
+        
+        # 构建地盘星和地盘门映射
+        di_pan_star_map = {p['guxiang']: p['cn'] for p in self.data['jiuXing']}
+        di_pan_gate_map = {p['guxiang']: p['cn'] for p in self.data['baMen']}
+        
+        # 构建八神名称映射
+        ba_shen_name_map = {
+            "符": "直符", "蛇": "螣蛇", "阴": "太阴", "合": "六合",
+            "虎": "白虎", "武": "玄武", "地": "九地", "天": "九天"
+        }
 
         for i in range(1, 10):
-            p = result.palaces[i]
-            p.earth_stems = di_pan_stems[i]
-            p.heaven_stems = tian_pan_stems[i]
-            p.stars = tian_pan_stars[i]
-            p.gates = ba_men_layout[i]
-            p.god = ba_shen_layout[i]
-            p.wuxing_color = palace_wuxing[i]
-            p.original_star = original_stars.get(i, "禽")
-            p.original_gate = original_gates.get(i, "")
+            palace = result.palaces[i]
+            
+            # 新的数据模型属性
+            palace.zhi_fu = ba_shen_name_map.get(ba_shen_layout[i], ba_shen_layout[i])
+            palace.tian_pan_stars = tian_pan_stars[i].copy()
+            palace.tian_pan_gates = [ba_men_layout[i]] if ba_men_layout[i] else []
+            palace.tian_pan_stems = tian_pan_stems[i].copy()
+            palace.di_pan_stems = di_pan_stems[i].copy()
+            palace.di_pan_star = di_pan_star_map.get(i, "禽")
+            palace.di_pan_gate = di_pan_gate_map.get(i, "")
+            palace.wuxing_color = palace_wuxing[i]
+            
+            # 向后兼容的属性 (deprecated)
+            palace.god = palace.zhi_fu
+            palace.stars = palace.tian_pan_stars.copy()
+            palace.gates = palace.tian_pan_gates[0] if palace.tian_pan_gates else ""
+            palace.heaven_stems = palace.tian_pan_stems.copy()
+            palace.earth_stems = palace.di_pan_stems.copy()
+            palace.original_star = palace.di_pan_star
+            palace.original_gate = palace.di_pan_gate
 
-        # 步骤 10: 计算宫侧方自动标注
+        # 步骤 11: 计算宫侧方自动标注
         result.side_annotations = self._calculate_annotations(result, di_pan_stems, tian_pan_stems)
         
-        # 步骤 11: 分析马星冲动
+        # 步骤 12: 分析马星冲动
         result.maxing_chongdong_targets = self._analyze_maxing_chongdong(result)
+        
+        # 步骤 13: 构建反向查询索引
+        result.index = result._build_index()
 
         return result
 
@@ -198,7 +223,7 @@ class PaiPanEngine:
         zhi_fu_palace = self._find_stem_palace(shi_gan, di_pan_stems, shi_chen_xun)
 
         if zhi_fu_palace == -1:
-            raise ValueError(f"无法在地盘上找到时干(值符) '{shi_gan}' 或其遁藏位置")
+            raise ValueError(f"无法在地盘上找到时干(直符) '{shi_gan}' 或其遁藏位置")
 
         stars_order_cn = ["蓬", "任", "冲", "辅", "英", "芮", "柱", "心"]
         qin_star = next(s for s in self.data['jiuXing'] if s['cn'] == '禽')
@@ -254,6 +279,28 @@ class PaiPanEngine:
             layout[current_palace] = current_men_cn
 
         return layout
+
+    def _calculate_tian_yi(self, zhi_fu_star: Dict, tian_pan_stars: List[List[str]]) -> str:
+        """
+        计算天乙：在直符星的故乡宫找到的天盘星
+        
+        Args:
+            zhi_fu_star: 直符星对象
+            tian_pan_stars: 天盘星布局
+            
+        Returns:
+            str: 天乙星的名称
+        """
+        # 获取直符星的故乡宫索引
+        gu_xiang_gong = zhi_fu_star.get('guxiang', 5)  # 默认为5宫（禽星）
+        
+        # 在故乡宫的天盘星中找到对应的星
+        if 1 <= gu_xiang_gong <= 9 and tian_pan_stars[gu_xiang_gong]:
+            # 通常取该宫的第一个天盘星作为天乙
+            return tian_pan_stars[gu_xiang_gong][0]
+        
+        # 如果找不到，返回空字符串
+        return ""
 
     # --- 【补全的函数】 ---
     def _find_ma_xing(self, shi_zhi: str) -> str:

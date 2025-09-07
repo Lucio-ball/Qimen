@@ -24,13 +24,14 @@ from PySide6.QtGui import QIcon, QAction
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from core.paipan_engine import PaiPanEngine
-from core.models import ChartResult
+from core.models import ChartResult, Case
 from ui.config import DisplayConfig
 from ui.widgets.query_widget import QueryWidget
+from ..widgets.central_widget import CentralWidget
+from ..widgets.attribute_panel_widget import AttributePanelWidget
+from ..widgets.annotation_panel_widget import AnnotationPanelWidget
 from ui.widgets.chart_widget import ChartWidget
-from ui.widgets.attribute_panel_widget import AttributePanelWidget
 from ui.widgets.welcome_widget import WelcomeWidget
-from ui.widgets.central_widget import CentralWidget
 from ui.dialogs.query_dialog import QueryDialog
 
 
@@ -75,14 +76,13 @@ class IntegratedMainWindow(QMainWindow):
         
         # 确保停靠面板初始状态正确（放在最后确保生效）
         self._setup_initial_dock_state()
-        self._setup_initial_dock_state()
         
     def _load_global_data(self) -> dict:
         """加载全局数据文件"""
         try:
             import json
             data_file_path = os.path.join(
-                os.path.dirname(__file__), '..', '..', 'data.json'
+                os.path.dirname(__file__), '..', '..', 'data', 'core_parameters.json'
             )
             with open(data_file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
@@ -116,22 +116,49 @@ class IntegratedMainWindow(QMainWindow):
         self.attribute_dock.setWidget(self.attribute_panel_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.attribute_dock)
         
+        # 创建右侧标注面板
+        self.annotation_dock = QDockWidget("标注面板", self)
+        self.annotation_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable |
+            QDockWidget.DockWidgetFeature.DockWidgetClosable
+        )
+        
+        # 设置允许停靠的区域
+        self.annotation_dock.setAllowedAreas(
+            Qt.DockWidgetArea.LeftDockWidgetArea |
+            Qt.DockWidgetArea.RightDockWidgetArea
+        )
+        
+        self.annotation_panel_widget = AnnotationPanelWidget(self)
+        self.annotation_dock.setWidget(self.annotation_panel_widget)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.annotation_dock)
+        
         # 设置停靠面板的默认大小
-        self.resizeDocks([self.attribute_dock], [300], Qt.Orientation.Horizontal)
+        self.resizeDocks([self.attribute_dock, self.annotation_dock], [300, 250], Qt.Orientation.Horizontal)
+        
+        # 将标注面板停靠在属性面板下方
+        self.tabifyDockWidget(self.attribute_dock, self.annotation_dock)
     
     def _setup_initial_dock_state(self):
         """设置停靠面板的初始状态"""
-        # 确保属性面板可见（在窗口完全初始化后设置）
+        # 属性面板默认隐藏，用户可通过视图菜单控制显示
         if hasattr(self, 'attribute_dock'):
-            # 明确设置停靠面板可见
-            self.attribute_dock.setVisible(True)
-            self.attribute_dock.show()
-            self.attribute_dock.raise_()  # 确保面板在前台
+            # 设置属性面板默认不可见
+            self.attribute_dock.setVisible(False)
+            self.attribute_dock.hide()
             
-            # 确保停靠面板的widget也是启用的
+            # 确保停靠面板的widget是启用的（虽然隐藏）
             if self.attribute_panel_widget:
                 self.attribute_panel_widget.setEnabled(True)
-                self.attribute_panel_widget.show()
+                
+        # 标注面板默认隐藏，用户可通过视图菜单控制显示  
+        if hasattr(self, 'annotation_dock'):
+            self.annotation_dock.setVisible(False)
+            self.annotation_dock.hide()
+            
+            if self.annotation_panel_widget:
+                self.annotation_panel_widget.setEnabled(True)
     
     def _setup_dock_actions(self):
         """设置停靠面板的菜单操作"""
@@ -141,6 +168,21 @@ class IntegratedMainWindow(QMainWindow):
             toggle_action = self.attribute_dock.toggleViewAction()
             
             # 确保action是启用的
+            toggle_action.setEnabled(True)
+            
+            # 添加到视图菜单
+            self.view_menu.addAction(toggle_action)
+            
+        # 添加标注面板的菜单操作
+        if hasattr(self, 'view_menu') and hasattr(self, 'annotation_dock'):
+            # 获取标注面板的toggleViewAction
+            annotation_toggle_action = self.annotation_dock.toggleViewAction()
+            
+            # 确保action是启用的
+            annotation_toggle_action.setEnabled(True)
+            
+            # 添加到视图菜单
+            self.view_menu.addAction(annotation_toggle_action)
             toggle_action.setEnabled(True)
             
             # 添加到视图菜单
@@ -202,10 +244,24 @@ class IntegratedMainWindow(QMainWindow):
         if self.central_widget:
             self.central_widget.new_case_requested.connect(self._handle_new_case_action)
             self.central_widget.tab_close_requested.connect(self._handle_tab_close_request)
+            
+            # 连接标签页切换信号
+            if self.central_widget.tab_widget:
+                self.central_widget.tab_widget.currentChanged.connect(self._handle_tab_changed)
         
         # 属性面板信号连接
         if self.attribute_panel_widget:
             self.attribute_panel_widget.config_changed.connect(self._handle_config_change)
+            
+        # 标注面板信号连接
+        if self.annotation_panel_widget:
+            self.annotation_panel_widget.annotation_selected.connect(self._handle_annotation_selected)
+            self.annotation_panel_widget.annotation_edited.connect(self._handle_annotation_edited)
+            self.annotation_panel_widget.annotation_deleted.connect(self._handle_annotation_deleted)
+            self.annotation_panel_widget.annotations_changed.connect(self._refresh_current_chart_annotations)
+            # v2.0 新增信号
+            self.annotation_panel_widget.template_applied.connect(self._handle_template_applied)
+            self.annotation_panel_widget.layer_changed.connect(self._handle_layer_changed)
             
     def _setup_window_properties(self):
         """设置窗口属性"""
@@ -262,10 +318,6 @@ class IntegratedMainWindow(QMainWindow):
             # 使用排盘引擎计算
             chart_result = self.engine.paipan(time_str)
             
-            # 创建新的图表组件
-            chart_widget = ChartWidget(self.global_data, self.current_config)
-            chart_widget.update_chart(chart_result)
-            
             # 生成案例标题
             self.case_counter += 1
             case_title = f"案例{self.case_counter}"
@@ -273,6 +325,16 @@ class IntegratedMainWindow(QMainWindow):
             # 可以根据起局信息生成更具描述性的标题
             if 'question' in query_data and query_data['question']:
                 case_title = f"案例{self.case_counter}: {query_data['question'][:10]}..."
+            
+            # 创建Case数据模型
+            case = Case(case_title, chart_result)
+            
+            # 创建新的图表组件
+            chart_widget = ChartWidget(self.global_data, self.current_config)
+            chart_widget.update_chart(chart_result)
+            
+            # 将case对象关联到chart_widget以便后续使用
+            chart_widget.case = case
             
             # 添加到标签页
             tab_index = self.central_widget.add_tab(chart_widget, case_title)
@@ -282,6 +344,11 @@ class IntegratedMainWindow(QMainWindow):
             
             # 存储图表数据到标签页（用于后续操作）
             chart_widget.chart_data = chart_result
+            
+            # 自动打开标注面板
+            if hasattr(self, 'annotation_dock') and self.annotation_dock:
+                self.annotation_dock.setVisible(True)
+                self.annotation_dock.raise_()  # 将面板置于前台
             
             self.status_bar.showMessage(f"案例创建完成 - {chart_result.ju_shu_info.get('遁', '')}{chart_result.ju_shu_info.get('局', '')}局")
             
@@ -325,16 +392,18 @@ class IntegratedMainWindow(QMainWindow):
             config: 新的显示配置
         """
         try:
-            # 更新当前配置
-            self.current_config = config
-            
-            # 更新所有标签页中的图表组件配置
-            for i in range(self.tab_widget.count()):
-                widget = self.tab_widget.widget(i)
-                if hasattr(widget, 'update_config') and widget != self.welcome_widget:
-                    widget.update_config(config)
-            
-            self.status_bar.showMessage("显示配置已更新")
+                # 更新当前配置
+                self.current_config = config
+
+                # 兼容新版CentralWidget架构
+                tab_widget = getattr(self.central_widget, 'tab_widget', None)
+                if tab_widget:
+                    for i in range(tab_widget.count()):
+                        widget = tab_widget.widget(i)
+                        if hasattr(widget, 'update_config') and widget != getattr(self, 'welcome_widget', None):
+                            widget.update_config(config)
+
+                self.status_bar.showMessage("显示配置已更新")
             
         except Exception as e:
             error_msg = f"配置更新错误: {str(e)}"
@@ -369,6 +438,110 @@ class IntegratedMainWindow(QMainWindow):
     def get_tab_count(self) -> int:
         """获取标签页数量"""
         return self.central_widget.get_tab_count() if self.central_widget else 0
+        
+    def _handle_tab_changed(self, index):
+        """处理标签页切换"""
+        if index >= 0 and self.central_widget:
+            # 获取当前标签页的widget
+            current_widget = self.central_widget.get_current_tab_widget()
+            if current_widget and hasattr(current_widget, 'case'):
+                # 更新标注面板显示当前案例的标注
+                if self.annotation_panel_widget:
+                    self.annotation_panel_widget.set_case(current_widget.case)
+                    
+                # 如果需要，可以连接ParameterWidget的标注信号
+                self._connect_parameter_widget_signals(current_widget)
+            else:
+                # 清空标注面板
+                if self.annotation_panel_widget:
+                    self.annotation_panel_widget.set_case(None)
+                    
+    def _connect_parameter_widget_signals(self, chart_widget):
+        """连接ChartWidget中的ParameterWidget信号"""
+        # 这里需要根据ChartWidget的实际结构来实现
+        # 假设ChartWidget有一个方法可以获取所有ParameterWidget
+        if hasattr(chart_widget, 'get_parameter_widgets'):
+            for param_widget in chart_widget.get_parameter_widgets():
+                # 连接标注相关信号
+                param_widget.annotation_requested.connect(self._handle_annotation_request)
+                param_widget.annotation_edit_requested.connect(self._handle_annotation_edit_request)
+                param_widget.annotation_remove_requested.connect(self._handle_annotation_remove_request)
+                
+    def _handle_annotation_request(self, param_id):
+        """处理添加标注请求"""
+        if self.annotation_panel_widget:
+            # 使用对话框让用户输入标注内容，而不是默认添加"新标注"
+            self.annotation_panel_widget.show_annotation_dialog_for_param(param_id)
+            
+    def _handle_annotation_edit_request(self, param_id):
+        """处理编辑标注请求"""
+        if self.annotation_panel_widget:
+            self.annotation_panel_widget.highlight_annotation(param_id)
+            
+    def _handle_annotation_remove_request(self, param_id):
+        """处理删除标注请求"""
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if current_widget and hasattr(current_widget, 'case'):
+            current_widget.case.remove_annotation(param_id)
+            # 刷新标注面板
+            if self.annotation_panel_widget:
+                self.annotation_panel_widget.set_case(current_widget.case)
+            # 刷新图表显示
+            self._refresh_chart_annotations(current_widget)
+            
+    def _handle_annotation_selected(self, param_id):
+        """处理标注选择"""
+        # 可以高亮显示对应的参数在图表中
+        pass
+        
+    def _handle_annotation_edited(self, param_id, annotation):
+        """处理标注编辑"""
+        # 刷新图表中对应参数的显示
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if current_widget:
+            self._refresh_chart_annotations(current_widget)
+            
+    def _handle_annotation_deleted(self, param_id):
+        """处理标注删除"""
+        # 刷新图表中对应参数的显示
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if current_widget:
+            self._refresh_chart_annotations(current_widget)
+            
+    def _refresh_current_chart_annotations(self):
+        """刷新当前图表的标注显示"""
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if current_widget:
+            self._refresh_chart_annotations(current_widget)
+            
+    def _refresh_chart_annotations(self, chart_widget):
+        """刷新图表中的标注显示"""
+        # 这里需要根据ChartWidget的实际结构来实现
+        # 更新所有ParameterWidget的标注显示
+        if hasattr(chart_widget, 'refresh_annotations'):
+            chart_widget.refresh_annotations()
+        elif hasattr(chart_widget, 'case'):
+            # fallback: 重新设置图表数据
+            chart_widget.update_chart(chart_widget.case.chart_result)
+            
+    # v2.0 新增处理方法
+    def _handle_template_applied(self, template_name):
+        """处理模板应用"""
+        print(f"模板已应用: {template_name}")
+        # 更新状态栏
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage(f"已应用模板: {template_name}", 3000)
+        # 刷新当前图表
+        self._refresh_current_chart_annotations()
+        
+    def _handle_layer_changed(self):
+        """处理图层变化"""
+        print("图层状态已变化")
+        # 刷新当前图表以反映图层可见性变化
+        self._refresh_current_chart_annotations()
+        # 如果状态栏存在，显示提示
+        if hasattr(self, 'status_bar'):
+            self.status_bar.showMessage("图层状态已更新", 2000)
 
 
 def main():

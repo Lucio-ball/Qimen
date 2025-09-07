@@ -37,7 +37,7 @@ class PalaceWidget(QWidget):
         初始化PalaceWidget
         
         Args:
-            global_data: 从data.json加载的全局数据字典
+            global_data: 从data/core_parameters.json加载的全局数据字典
             parent: 父控件
         """
         super().__init__(parent)
@@ -89,7 +89,7 @@ class PalaceWidget(QWidget):
             palace_data: 包含此宫位所有基础信息的Palace对象
             chart_data: 包含全局信息（如值符、值使、局数）的ChartResult对象
             config: DisplayConfig对象，用于控制显示逻辑
-            global_data: 从data.json加载的全局数据字典，用于查询五行等基础信息
+            global_data: 从data/core_parameters.json加载的全局数据字典，用于查询五行等基础信息
         """
         # 1. 清空所有控件
         self._clear_all_widgets(config)
@@ -108,7 +108,7 @@ class PalaceWidget(QWidget):
             config: DisplayConfig对象
         """
         for widget in self.param_widgets.values():
-            widget.set_data("", config, QColor(0, 0, 0), False)
+            widget.set_data("", config, QColor(0, 0, 0), False, "")
             
     def _update_center_palace(self, palace_data: Palace, chart_data: ChartResult,
                              config: DisplayConfig, global_data: dict):
@@ -124,16 +124,27 @@ class PalaceWidget(QWidget):
         # 存储全局数据供其他方法使用
         self.global_data = global_data
         
-        # 格子5：显示局数信息
-        ju_shu_text = f"{chart_data.ju_shu_info.get('遁', '')}{chart_data.ju_shu_info.get('局', '')}局"
-        tu_color = self.wuxing_colors["土"]  # 土行颜色
-        self.param_widgets[5].set_data(ju_shu_text, config, tu_color, False)
-        
-        # 格子9：显示中宫地盘干
-        if palace_data.earth_stems:
-            earth_stem = palace_data.earth_stems[0]
-            color = self._get_wuxing_color("tianGan", earth_stem)
-            self.param_widgets[9].set_data(earth_stem, config, color, False)
+        # 中宫的格子应该无法选中，所以不设置参数ID或设置为空
+        for i in range(1, 10):
+            if i == 5:
+                # 格子5：显示局数信息（中宫特有，不可操作）
+                ju_shu_text = f"{chart_data.ju_shu_info.get('遁', '')}{chart_data.ju_shu_info.get('局', '')}局"
+                tu_color = self.wuxing_colors["土"]  # 土行颜色
+                # 不设置参数ID，使其无法右键操作
+                self.param_widgets[5].set_data(ju_shu_text, config, tu_color, False, "")
+            elif i == 9:
+                # 格子9：显示中宫地盘干（中宫特有，不可操作）
+                if palace_data.earth_stems:
+                    earth_stem = palace_data.earth_stems[0]
+                    color = self._get_wuxing_color("tianGan", earth_stem)
+                    # 不设置参数ID，使其无法右键操作
+                    self.param_widgets[9].set_data(earth_stem, config, color, False, "")
+                else:
+                    # 没有地盘干时，设置空的不可操作格子
+                    self.param_widgets[9].set_data("", config, "#000000", False, "")
+            else:
+                # 其他格子设置为空的且不可操作
+                self.param_widgets[i].set_data("", config, "#000000", False, "")
             
     def _update_normal_palace(self, palace_data: Palace, chart_data: ChartResult,
                              config: DisplayConfig, global_data: dict):
@@ -155,7 +166,8 @@ class PalaceWidget(QWidget):
             is_bold = False  # 八神本身不加粗
             # 始终显示完整名称
             display_text = self._get_full_name("baShen", palace_data.god)
-            self.param_widgets[2].set_data(display_text, config, color, is_bold)
+            param_id = f"palace_{palace_data.index}_god"
+            self.param_widgets[2].set_data(display_text, config, color, is_bold, param_id)
             
         # 格子5：九星（值符星需要加粗）
         if palace_data.stars:
@@ -163,13 +175,20 @@ class PalaceWidget(QWidget):
             if len(palace_data.stars) == 2:
                 # 双星情况使用简化显示，避免过长
                 star_text = self._format_stars(palace_data.stars)
+                # 传递双星信息给ParameterWidget，特殊处理禽芮顺序
+                if "禽" in palace_data.stars and "芮" in palace_data.stars:
+                    dual_stars = ["禽", "芮"]  # 按传统顺序
+                else:
+                    dual_stars = palace_data.stars
             else:
                 # 单星情况始终显示完整名称
                 star_text = self._get_full_name("jiuXing", palace_data.stars[0])
+                dual_stars = None
             
             color = self._get_wuxing_color("jiuXing", palace_data.stars[0])
             is_bold = chart_data.zhi_fu in palace_data.stars  # 检查是否包含值符星
-            self.param_widgets[5].set_data(star_text, config, color, is_bold)
+            param_id = f"palace_{palace_data.index}_star_0"
+            self.param_widgets[5].set_data(star_text, config, color, is_bold, param_id, annotation_texts=None, dual_stars=dual_stars)
             
         # 格子8：八门
         if palace_data.gates:
@@ -177,19 +196,22 @@ class PalaceWidget(QWidget):
             is_bold = palace_data.gates == chart_data.zhi_shi
             # 始终显示完整名称
             display_text = self._get_full_name("baMen", palace_data.gates)
-            self.param_widgets[8].set_data(display_text, config, color, is_bold)
+            param_id = f"palace_{palace_data.index}_gate"
+            self.param_widgets[8].set_data(display_text, config, color, is_bold, param_id)
             
         # 格子6：天盘干（主要）
         if palace_data.heaven_stems:
             heaven_stem = palace_data.heaven_stems[0]
             color = self._get_wuxing_color("tianGan", heaven_stem)
-            self.param_widgets[6].set_data(heaven_stem, config, color, False)
+            param_id = f"palace_{palace_data.index}_heaven_stem_0"
+            self.param_widgets[6].set_data(heaven_stem, config, color, False, param_id)
             
         # 格子9：地盘干（主要）
         if palace_data.earth_stems:
             earth_stem = palace_data.earth_stems[0]
             color = self._get_wuxing_color("tianGan", earth_stem)
-            self.param_widgets[9].set_data(earth_stem, config, color, False)
+            param_id = f"palace_{palace_data.index}_earth_stem_0"
+            self.param_widgets[9].set_data(earth_stem, config, color, False, param_id)
             
         # 处理寄宫天干（格子4和格子7）
         self._handle_additional_stems(palace_data, config)
@@ -248,8 +270,12 @@ class PalaceWidget(QWidget):
         if len(stars) == 1:
             return stars[0]
         elif len(stars) == 2:
-            # 处理双星，如"禽芮"，这种情况保持简化显示避免过长
-            return "".join(stars)
+            # 处理双星，特殊处理禽芮顺序
+            if "禽" in stars and "芮" in stars:
+                return "禽芮"  # 按传统顺序显示
+            else:
+                # 其他双星情况，保持原顺序
+                return "".join(stars)
         else:
             # 多星情况，用逗号连接
             return ",".join(stars)
@@ -267,20 +293,24 @@ class PalaceWidget(QWidget):
             for i, stem in enumerate(palace_data.heaven_stems[1:], 1):
                 if i == 1 and 4 in self.param_widgets:  # 格子4
                     color = self._get_wuxing_color("tianGan", stem)
-                    self.param_widgets[4].set_data(stem, config, color, False)
+                    param_id = f"palace_{palace_data.index}_heaven_stem_{i}"
+                    self.param_widgets[4].set_data(stem, config, color, False, param_id)
                 elif i == 2 and 7 in self.param_widgets:  # 格子7
                     color = self._get_wuxing_color("tianGan", stem)
-                    self.param_widgets[7].set_data(stem, config, color, False)
+                    param_id = f"palace_{palace_data.index}_heaven_stem_{i}"
+                    self.param_widgets[7].set_data(stem, config, color, False, param_id)
                     
         # 地盘干的额外显示
         if len(palace_data.earth_stems) > 1:
             for i, stem in enumerate(palace_data.earth_stems[1:], 1):
                 if i == 1 and 7 in self.param_widgets:  # 格子7（左下角）
                     color = self._get_wuxing_color("tianGan", stem)
-                    self.param_widgets[7].set_data(stem, config, color, False)
+                    param_id = f"palace_{palace_data.index}_earth_stem_{i}"
+                    self.param_widgets[7].set_data(stem, config, color, False, param_id)
                 elif i == 2 and 3 in self.param_widgets:  # 格子3
                     color = self._get_wuxing_color("tianGan", stem)
-                    self.param_widgets[3].set_data(stem, config, color, False)
+                    param_id = f"palace_{palace_data.index}_earth_stem_{i}"
+                    self.param_widgets[3].set_data(stem, config, color, False, param_id)
                     
     def _get_wuxing_color(self, param_type: str, param_name: str) -> QColor:
         """
@@ -311,6 +341,46 @@ class PalaceWidget(QWidget):
         except Exception as e:
             print(f"查询五行颜色时出错: {param_type}, {param_name}, {e}")
             return QColor(0, 0, 0)
+            
+    def get_parameter_widgets(self):
+        """获取所有ParameterWidget列表，用于连接标注信号"""
+        return list(self.param_widgets.values())
+        
+    def refresh_annotations(self, annotations_dict):
+        """
+        刷新所有ParameterWidget的标注显示
+        
+        Args:
+            annotations_dict: 案例的标注字典 {param_id: List[Dict[str, str]]}
+        """
+        for widget in self.param_widgets.values():
+            param_id = widget.get_param_id()
+            if not param_id:
+                continue
+                
+            # 检查是否为双星
+            dual_stars = widget.get_dual_stars()
+            if dual_stars and len(dual_stars) == 2:
+                # 双星情况：收集两个星的标注，不添加前缀
+                all_annotations = []
+                for star in dual_stars:
+                    star_id = f"{param_id}_{star}"
+                    if star_id in annotations_dict:
+                        star_annotations = annotations_dict[star_id]
+                        # 直接添加标注文本，添加星名前缀用于内部识别
+                        for ann in star_annotations:
+                            prefixed_text = f"{star}:{ann.get('text', '')}"
+                            all_annotations.append(prefixed_text)
+                
+                widget.set_annotation_texts(all_annotations if all_annotations else None)
+            else:
+                # 单星情况：原有逻辑
+                if param_id in annotations_dict:
+                    annotations_list = annotations_dict[param_id]
+                    annotation_texts = [ann.get('text', '') for ann in annotations_list]
+                    widget.set_annotation_texts(annotation_texts)
+                else:
+                    widget.set_annotation_texts(None)
 
 
 def create_test_data():
@@ -344,10 +414,10 @@ def main():
     
     # 加载测试数据
     try:
-        with open("data.json", "r", encoding="utf-8") as f:
+        with open("data/core_parameters.json", "r", encoding="utf-8") as f:
             global_data = json.load(f)
     except FileNotFoundError:
-        # 如果找不到data.json，创建基本的测试数据
+        # 如果找不到core_parameters.json，创建基本的测试数据
         global_data = {
             "tianGan": [
                 {"cn": "甲", "wuxing": "木"},

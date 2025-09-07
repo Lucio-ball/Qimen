@@ -57,7 +57,7 @@ class ChartWidget(QWidget):
         初始化ChartWidget
         
         Args:
-            global_data: 从data.json加载的全局数据字典
+            global_data: 从data/core_parameters.json加载的全局数据字典
             config: DisplayConfig显示配置对象
             parent: 父控件
         """
@@ -317,6 +317,23 @@ class ChartWidget(QWidget):
         
         # 更新侧方标注
         self._update_side_annotations(chart_data)
+        
+    def get_parameter_widgets(self):
+        """获取所有ParameterWidget列表，用于连接标注信号"""
+        param_widgets = []
+        for palace_widget in self.palace_widgets.values():
+            param_widgets.extend(palace_widget.get_parameter_widgets())
+        return param_widgets
+        
+    def refresh_annotations(self):
+        """刷新所有ParameterWidget的标注显示"""
+        if not hasattr(self, 'case') or not self.case:
+            return
+            
+        # 使用新的图层API获取所有可见标注
+        visible_annotations = self.case.get_all_visible_annotations()
+        for palace_widget in self.palace_widgets.values():
+            palace_widget.refresh_annotations(visible_annotations)
         
     def update_config(self, config: DisplayConfig):
         """
@@ -774,10 +791,10 @@ def main():
     
     # 加载全局数据
     try:
-        with open("data.json", "r", encoding="utf-8") as f:
+        with open("data/core_parameters.json", "r", encoding="utf-8") as f:
             global_data = json.load(f)
     except FileNotFoundError:
-        print("未找到data.json文件，使用基础测试数据")
+        print("未找到core_parameters.json文件，使用基础测试数据")
         global_data = {}
     
     # 创建主窗口
@@ -816,7 +833,7 @@ def main():
                     time_str += "00"
                 
                 # 排盘
-                engine = PaiPanEngine(data_file_path='data.json')
+                engine = PaiPanEngine(data_file_path='data/core_parameters.json')
                 chart_result = engine.paipan(time_str)
                 
                 # 更新显示

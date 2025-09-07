@@ -663,7 +663,7 @@
     { "name": "qin", "cn": "禽", "yinyang": "阳", "wuxing": "土", "guxiang": 5, "xiangyi": "" }
   ],
   "baShen": [
-    { "name": "fu", "cn": "值符", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
+    { "name": "fu", "cn": "直符", "yinyang": "阳", "wuxing": "土", "xiangyi": "" },
     { "name": "she", "cn": "螣蛇", "yinyang": "阴", "wuxing": "火", "xiangyi": "" },
     { "name": "yin", "cn": "太阴", "yinyang": "阴", "wuxing": "金", "xiangyi": "" },
     { "name": "he", "cn": "六合", "yinyang": "阳", "wuxing": "木", "xiangyi": "" },
