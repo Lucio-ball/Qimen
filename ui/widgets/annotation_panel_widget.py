@@ -234,23 +234,23 @@ class AnnotationPanelWidget(QWidget):
         layout.addWidget(title_label)
         
         # 创建选项卡widget
-        tab_widget = QTabWidget()
-        layout.addWidget(tab_widget)
+        self.tab_widget = QTabWidget()
+        layout.addWidget(self.tab_widget)
         
         # 标注管理选项卡
         annotation_tab = QWidget()
         self._setup_annotation_tab(annotation_tab)
-        tab_widget.addTab(annotation_tab, "标注管理")
+        self.tab_widget.addTab(annotation_tab, "标注管理")
         
         # 模板选项卡
         template_tab = QWidget()
         self._setup_template_tab(template_tab)
-        tab_widget.addTab(template_tab, "模板应用")
+        self.tab_widget.addTab(template_tab, "模板应用")
         
         # 图层管理选项卡
         layer_tab = QWidget()
         self._setup_layer_tab(layer_tab)
-        tab_widget.addTab(layer_tab, "图层管理")
+        self.tab_widget.addTab(layer_tab, "图层管理")
         
         # 统计信息
         self.stats_label = QLabel("标注总数: 0")
@@ -511,12 +511,28 @@ class AnnotationPanelWidget(QWidget):
         for item in template_data:
             param_type = item.get("param_type", "")
             param_value = item.get("param_value", "")
+            param_name = item.get("param_name", "")
             label = item.get("label", "")
             
-            preview_text = f"类型: {param_type}"
-            if param_value:
-                preview_text += f", 值: {param_value}"
-            preview_text += f" -> {label}"
+            # 构建更友好的预览格式："参数名/参数值 -> 标注"
+            if param_name:
+                # 特殊参数类型，如太岁、月干等
+                preview_text = f"{param_name} -> {label}"
+            elif param_value:
+                # 普通参数，显示参数值
+                preview_text = f"{param_value} -> {label}"
+            else:
+                # 没有具体参数值的情况，显示参数类型
+                type_names = {
+                    "riGan": "日干",
+                    "zhiShi": "值使",
+                    "tianGan": "天干",
+                    "jiuXing": "九星",
+                    "baMen": "八门",
+                    "baShen": "八神"
+                }
+                type_display = type_names.get(param_type, param_type)
+                preview_text = f"{type_display} -> {label}"
             
             self.template_preview.addItem(preview_text)
             
@@ -642,6 +658,22 @@ class AnnotationPanelWidget(QWidget):
         elif param_type == "jiuXing":
             # 九星 - 查找指定的九星
             if param_value:
+                # 构建九星名称映射（完整名称 -> 简化名称）
+                jiu_xing_name_map = {
+                    "天蓬": "蓬", "天任": "任", "天冲": "冲", "天辅": "辅",
+                    "天英": "英", "天芮": "芮", "天心": "心", "天柱": "柱", "天禽": "禽"
+                }
+                
+                # 获取可能的匹配值（支持完整名称和简化名称）
+                possible_values = [param_value]
+                if param_value in jiu_xing_name_map:
+                    possible_values.append(jiu_xing_name_map[param_value])
+                elif param_value in jiu_xing_name_map.values():
+                    # 如果是简化名称，找到对应的完整名称
+                    full_name = next((k for k, v in jiu_xing_name_map.items() if v == param_value), None)
+                    if full_name:
+                        possible_values.append(full_name)
+                
                 for palace in chart_result.palaces:
                     if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                         continue
@@ -649,12 +681,13 @@ class AnnotationPanelWidget(QWidget):
                     # 检查是否为双星情况
                     if len(palace.stars) == 2:
                         # 双星情况：如果指定的星在双星中，使用双星ID格式
-                        if param_value in palace.stars:
-                            matching_ids.append(f"palace_{palace.index}_tian_pan_star_0_{param_value}")
+                        for star in palace.stars:
+                            if star in possible_values:
+                                matching_ids.append(f"palace_{palace.index}_tian_pan_star_0_{star}")
                     else:
                         # 单星情况：使用原有逻辑
                         for i, star in enumerate(palace.stars):
-                            if star == param_value:
+                            if star in possible_values:
                                 matching_ids.append(f"palace_{palace.index}_tian_pan_star_{i}")
                             
         elif param_type == "baMen":

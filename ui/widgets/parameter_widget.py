@@ -31,7 +31,6 @@ class ParameterWidget(QWidget):
     
     # 标注相关信号
     annotation_requested = Signal(str)  # 请求添加标注时发射参数ID
-    annotation_edit_requested = Signal(str)  # 请求编辑标注时发射参数ID
     annotation_remove_requested = Signal(str)  # 请求删除标注时发射参数ID
     
     def __init__(self, parent=None):
@@ -418,10 +417,6 @@ class ParameterWidget(QWidget):
         
         if self._annotation_texts:
             menu.addSeparator()
-            # 已有标注的情况 - 添加管理标注选项
-            manage_action = QAction("管理标注...", self)
-            manage_action.triggered.connect(lambda: self.annotation_edit_requested.emit(self._param_id))
-            menu.addAction(manage_action)
             
             # 显示当前标注信息
             annotations_text = "、".join(self._annotation_texts)
@@ -518,16 +513,12 @@ def main():
     def on_annotation_requested(param_id):
         print(f"请求为 {param_id} 添加标注")
         
-    def on_annotation_edit_requested(param_id):
-        print(f"请求编辑 {param_id} 的标注")
-        
     def on_annotation_remove_requested(param_id):
         print(f"请求删除 {param_id} 的标注")
         
     # 连接所有测试控件的信号
     for widget in [widget1, widget2, widget3, widget4, widget5, widget6, widget7]:
         widget.annotation_requested.connect(on_annotation_requested)
-        widget.annotation_edit_requested.connect(on_annotation_edit_requested)
         widget.annotation_remove_requested.connect(on_annotation_remove_requested)
     
     # 显示说明

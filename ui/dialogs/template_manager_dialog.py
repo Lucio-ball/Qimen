@@ -53,6 +53,19 @@ class TemplateManagerDialog(QDialog):
         
         self.reverse_param_type_mapping = {v: k for k, v in self.param_type_mapping.items()}
         
+        # 各参数类型对应的选项数据
+        self.param_options = {
+            "special": ["太岁", "月干", "日干", "时干", "年命"],
+            "baShen": ["直符", "螣蛇", "太阴", "六合", "白虎", "玄武", "九地", "九天"],
+            "tianGan": ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"],
+            "jiuXing": ["天蓬", "天任", "天冲", "天辅", "天英", "天芮", "天心", "天柱", "天禽"],
+            "baMen": ["休门", "生门", "伤门", "杜门", "景门", "死门", "惊门", "开门"],
+            "zhiFu": ["值符星"],  # 值符是动态的，通常就是值符星
+            "zhiShi": ["值使门"],  # 值使是动态的，通常就是值使门
+            "riGan": ["日干"],     # 日干是动态的
+            "shiGan": ["时干"]     # 时干是动态的
+        }
+        
         self._setup_ui()
         self._load_templates()
         
@@ -132,9 +145,17 @@ class TemplateManagerDialog(QDialog):
         header.setStretchLastSection(True)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)  # 标注文本列可伸缩
+        
+        # 设置垂直表头（行）属性，支持自动调整行高
+        vertical_header = self.content_table.verticalHeader()
+        vertical_header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         
         self.content_table.setAlternatingRowColors(True)
         self.content_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        
+        # 设置文本换行
+        self.content_table.setWordWrap(True)
         
         right_layout.addWidget(self.content_table)
         
@@ -227,6 +248,7 @@ class TemplateManagerDialog(QDialog):
             # 参数类型下拉框
             type_combo = QComboBox()
             type_combo.addItems(list(self.param_type_mapping.values()))
+            type_combo.currentTextChanged.connect(lambda text, r=row: self._on_param_type_changed(r, text))
             
             # 设置当前值
             param_type = item_data.get("param_type", "")
@@ -235,14 +257,29 @@ class TemplateManagerDialog(QDialog):
             
             self.content_table.setCellWidget(row, 0, type_combo)
             
-            # 参数名称
+            # 参数名称下拉框
+            name_combo = QComboBox()
+            name_combo.setEditable(True)  # 允许编辑
+            self.content_table.setCellWidget(row, 1, name_combo)
+            
+            # 设置参数名称选项
+            if param_type in self.param_options:
+                name_combo.addItems(self.param_options[param_type])
+            
+            # 设置当前参数名称值
             param_name = item_data.get("param_name", item_data.get("param_value", ""))
-            name_item = QTableWidgetItem(str(param_name) if param_name else "")
-            self.content_table.setItem(row, 1, name_item)
+            if param_name:
+                # 如果当前值在选项中，选中它；否则直接设置文本
+                if param_name in [name_combo.itemText(i) for i in range(name_combo.count())]:
+                    name_combo.setCurrentText(str(param_name))
+                else:
+                    name_combo.setEditText(str(param_name))
             
             # 标注文本
             label = item_data.get("label", "")
             label_item = QTableWidgetItem(label)
+            # 设置文本换行标志
+            label_item.setFlags(label_item.flags() | Qt.ItemFlag.ItemIsEditable)
             self.content_table.setItem(row, 2, label_item)
             
     def _add_table_row(self):
@@ -253,11 +290,45 @@ class TemplateManagerDialog(QDialog):
         # 添加参数类型下拉框
         type_combo = QComboBox()
         type_combo.addItems(list(self.param_type_mapping.values()))
+        type_combo.currentTextChanged.connect(lambda text, row=row_count: self._on_param_type_changed(row, text))
         self.content_table.setCellWidget(row_count, 0, type_combo)
         
-        # 添加空的参数名称和标注文本
-        self.content_table.setItem(row_count, 1, QTableWidgetItem(""))
-        self.content_table.setItem(row_count, 2, QTableWidgetItem(""))
+        # 添加参数名称下拉框
+        name_combo = QComboBox()
+        name_combo.setEditable(True)  # 允许编辑，以防有特殊需求
+        self.content_table.setCellWidget(row_count, 1, name_combo)
+        
+        # 添加标注文本
+        text_item = QTableWidgetItem("")
+        text_item.setFlags(text_item.flags() | Qt.ItemFlag.ItemIsEditable)
+        self.content_table.setItem(row_count, 2, text_item)
+        
+        # 初始化参数名称选项（默认选择第一个参数类型）
+        if list(self.param_type_mapping.values()):
+            first_type = list(self.param_type_mapping.values())[0]
+            self._on_param_type_changed(row_count, first_type)
+            
+    def _on_param_type_changed(self, row: int, param_type_display: str):
+        """参数类型改变时更新参数名称下拉菜单"""
+        # 获取对应的参数类型key
+        param_type = self.reverse_param_type_mapping.get(param_type_display, "")
+        
+        # 获取参数名称下拉框
+        name_combo = self.content_table.cellWidget(row, 1)
+        if not isinstance(name_combo, QComboBox):
+            return
+            
+        # 清空现有选项
+        name_combo.clear()
+        
+        # 根据参数类型添加对应选项
+        if param_type in self.param_options:
+            options = self.param_options[param_type]
+            name_combo.addItems(options)
+            
+            # 如果只有一个选项，自动选择
+            if len(options) == 1:
+                name_combo.setCurrentIndex(0)
         
     def _delete_table_row(self):
         """删除选中的表格行"""
@@ -300,13 +371,13 @@ class TemplateManagerDialog(QDialog):
         template_data = []
         for row in range(self.content_table.rowCount()):
             type_combo = self.content_table.cellWidget(row, 0)
-            param_name_item = self.content_table.item(row, 1)
+            name_combo = self.content_table.cellWidget(row, 1)
             label_item = self.content_table.item(row, 2)
             
-            if type_combo and param_name_item and label_item:
+            if type_combo and name_combo and label_item:
                 param_type_display = type_combo.currentText()
                 param_type = self.reverse_param_type_mapping.get(param_type_display, "")
-                param_name = param_name_item.text().strip()
+                param_name = name_combo.currentText().strip()
                 label = label_item.text().strip()
                 
                 if param_type and label:  # 至少需要类型和标注文本

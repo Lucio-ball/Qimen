@@ -477,7 +477,6 @@ class IntegratedMainWindow(QMainWindow):
             for param_widget in chart_widget.get_parameter_widgets():
                 # 连接标注相关信号
                 param_widget.annotation_requested.connect(self._handle_annotation_request)
-                param_widget.annotation_edit_requested.connect(self._handle_annotation_edit_request)
                 param_widget.annotation_remove_requested.connect(self._handle_annotation_remove_request)
                 
     def _handle_annotation_request(self, param_id):
@@ -485,11 +484,6 @@ class IntegratedMainWindow(QMainWindow):
         if self.annotation_panel_widget:
             # 使用对话框让用户输入标注内容，而不是默认添加"新标注"
             self.annotation_panel_widget.show_annotation_dialog_for_param(param_id)
-            
-    def _handle_annotation_edit_request(self, param_id):
-        """处理编辑标注请求"""
-        if self.annotation_panel_widget:
-            self.annotation_panel_widget.highlight_annotation(param_id)
             
     def _handle_annotation_remove_request(self, param_id):
         """处理删除标注请求"""

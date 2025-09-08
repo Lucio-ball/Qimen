@@ -30,7 +30,7 @@
     {
       "param_type": "baShen",
       "label": "婚姻",
-      "param_value": "合"
+      "param_value": "六合"
     },
     {
       "param_type": "tianGan",
@@ -45,17 +45,17 @@
     {
       "param_type": "jiuXing",
       "label": "天芮(妻妾)",
-      "param_value": "芮"
+      "param_value": "天芮"
     },
     {
       "param_type": "jiuXing",
       "label": "天禽(媒人)",
-      "param_value": "禽"
+      "param_value": "天禽"
     },
     {
       "param_type": "baMen",
       "label": "休门(婚姻)",
-      "param_value": "休"
+      "param_value": "休门"
     }
   ],
   "工作晋升": [
