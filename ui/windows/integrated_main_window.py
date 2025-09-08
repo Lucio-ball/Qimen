@@ -321,6 +321,8 @@ class IntegratedMainWindow(QMainWindow):
             # 设置年命信息
             if 'nian_ming' in query_data and query_data['nian_ming']:
                 chart_result.nian_ming = query_data['nian_ming']
+                # 重新计算特殊参数，因为年命会影响特殊参数的计算
+                chart_result.special_params = self.engine._analyze_special_params(chart_result)
             
             # 生成案例标题
             self.case_counter += 1
@@ -352,6 +354,9 @@ class IntegratedMainWindow(QMainWindow):
             # 同步标注面板显示当前案例
             if self.annotation_panel_widget:
                 self.annotation_panel_widget.set_case(case)
+                
+                # 自动应用默认模板
+                self._apply_template("_default_")
             
             # 自动打开标注面板
             if hasattr(self, 'annotation_dock') and self.annotation_dock:
@@ -550,6 +555,166 @@ class IntegratedMainWindow(QMainWindow):
         # 如果状态栏存在，显示提示
         if hasattr(self, 'status_bar'):
             self.status_bar.showMessage("图层状态已更新", 2000)
+            
+    def _apply_template(self, template_name: str):
+        """
+        应用模板到当前激活的案例
+        
+        Args:
+            template_name: 模板名称，包括特殊的"_default_"
+        """
+        try:
+            # 获取当前激活的案例
+            current_widget = self.central_widget.get_current_tab_widget()
+            if not current_widget or not hasattr(current_widget, 'case'):
+                print(f"没有激活的案例，无法应用模板 '{template_name}'")
+                return
+                
+            case = current_widget.case
+            if not case:
+                print(f"案例对象为空，无法应用模板 '{template_name}'")
+                return
+                
+            # 加载模板数据
+            import json
+            import os
+            template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "templates.json")
+            
+            if not os.path.exists(template_path):
+                print(f"模板文件不存在: {template_path}")
+                return
+                
+            with open(template_path, 'r', encoding='utf-8') as f:
+                templates_data = json.load(f)
+                
+            if template_name not in templates_data:
+                print(f"模板 '{template_name}' 不存在")
+                return
+                
+            template_rules = templates_data[template_name]
+            chart_result = case.chart_result
+            
+            # 获取当前激活图层
+            active_layer = case.get_active_layer()
+            if not active_layer:
+                print("没有激活的图层")
+                return
+                
+            applied_count = 0
+            
+            # 遍历模板规则
+            for rule in template_rules:
+                param_type = rule.get("param_type", "")
+                label = rule.get("label", "标注")
+                
+                matching_param_ids = []
+                
+                if param_type == "special":
+                    # 处理特殊参数
+                    param_name = rule.get("param_name", "")
+                    matching_param_ids = self._find_special_param_ids(chart_result, param_name)
+                else:
+                    # 处理常规参数
+                    param_value = rule.get("param_value")
+                    matching_param_ids = self._find_regular_param_ids(chart_result, param_type, param_value)
+                
+                # 为每个匹配的参数ID添加标注
+                for param_id in matching_param_ids:
+                    annotations = active_layer["annotations"]
+                    if param_id not in annotations:
+                        annotations[param_id] = []
+                        
+                    # 检查是否已存在相同文本的标注
+                    existing_texts = [ann.get("text", "") for ann in annotations[param_id]]
+                    if label not in existing_texts:
+                        annotations[param_id].append({
+                            "text": label,
+                            "shape": "circle",
+                            "color": "#FF0000"
+                        })
+                        applied_count += 1
+                        
+            # 刷新显示
+            if applied_count > 0:
+                self._refresh_current_chart_annotations()
+                if self.annotation_panel_widget:
+                    self.annotation_panel_widget._refresh_annotation_list()
+                    self.annotation_panel_widget._refresh_layer_list()
+                    
+                print(f"成功应用模板 '{template_name}'，添加了 {applied_count} 个标注")
+            else:
+                print(f"模板 '{template_name}' 没有找到匹配的参数")
+                
+        except Exception as e:
+            print(f"应用模板失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            
+    def _find_special_param_ids(self, chart_result, param_name: str) -> list:
+        """查找特殊参数的ID"""
+        if not hasattr(chart_result, 'special_params') or not chart_result.special_params:
+            print(f"ChartResult没有special_params或为空")
+            return []
+            
+        special_params = chart_result.special_params
+        if param_name not in special_params:
+            print(f"特殊参数 '{param_name}' 不存在于special_params中")
+            print(f"可用的特殊参数: {list(special_params.keys())}")
+            return []
+            
+        param_ids = []
+        param_locations = special_params[param_name]
+        
+        print(f"查找特殊参数 '{param_name}', 位置数量: {len(param_locations)}")
+        
+        for location_info in param_locations:
+            # 直接使用location_info中的id字段
+            param_id = location_info.get("id", "")
+            if param_id:
+                param_ids.append(param_id)
+                print(f"  找到位置: {param_id}")
+                
+        return param_ids
+        
+    def _find_regular_param_ids(self, chart_result, param_type: str, param_value) -> list:
+        """查找常规参数的ID"""
+        matching_ids = []
+        
+        # 根据不同的参数类型查找匹配项
+        if param_type == "tianGan":
+            # 天干 - 在天盘干中查找
+            for palace_idx in range(1, 10):
+                palace = chart_result.palaces[palace_idx]
+                for stem_idx, stem in enumerate(palace.tian_pan_stems):
+                    if stem == param_value:
+                        matching_ids.append(f"palace_{palace_idx}_tian_pan_stem_{stem_idx}")
+                        
+        elif param_type == "jiuXing":
+            # 九星 - 在天盘星中查找
+            for palace_idx in range(1, 10):
+                palace = chart_result.palaces[palace_idx]
+                for star_idx, star in enumerate(palace.tian_pan_stars):
+                    if star == param_value:
+                        matching_ids.append(f"palace_{palace_idx}_tian_pan_star_{star_idx}")
+                        
+        elif param_type == "baMen":
+            # 八门 - 在天盘门中查找
+            for palace_idx in range(1, 10):
+                palace = chart_result.palaces[palace_idx]
+                for gate_idx, gate in enumerate(palace.tian_pan_gates):
+                    if gate == param_value:
+                        matching_ids.append(f"palace_{palace_idx}_tian_pan_gate_{gate_idx}")
+                        
+        elif param_type == "baShen":
+            # 八神 - 在八神中查找
+            for palace_idx in range(1, 10):
+                palace = chart_result.palaces[palace_idx]
+                if palace.zhi_fu == param_value:
+                    matching_ids.append(f"palace_{palace_idx}_zhi_fu")
+                    
+        # 可以继续添加其他参数类型的处理...
+                    
+        return matching_ids
 
 
 def main():

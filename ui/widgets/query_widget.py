@@ -432,8 +432,11 @@ class QueryWidget(QWidget):
             si_zhu = get_si_zhu(birth_datetime)
             nian_zhu = si_zhu['年']
             
+            # 提取年命干支（去掉"年"字）
+            nian_ming_gan_zhi = nian_zhu.replace('年', '') if nian_zhu.endswith('年') else nian_zhu
+            
             # 显示结果
-            self.gan_zhi_label.setText(nian_zhu)
+            self.gan_zhi_label.setText(nian_ming_gan_zhi)
             self.gan_zhi_label.setStyleSheet("""
                 QLabel {
                     font-size: 12px;

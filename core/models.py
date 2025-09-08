@@ -86,12 +86,12 @@ class ChartResult:
             # 处理天盘干 (tian_pan_stems)
             for stem_idx, stem in enumerate(palace.tian_pan_stems):
                 if stem:
-                    self._add_to_index(index, 'tianGan', stem, palace_idx, 'tian_pan_stems', stem, stem_idx)
+                    self._add_to_index(index, 'tianGan', stem, palace_idx, 'tian_pan_stem', stem, stem_idx)
             
             # 处理地盘干 (di_pan_stems)
             for stem_idx, stem in enumerate(palace.di_pan_stems):
                 if stem:
-                    self._add_to_index(index, 'tianGan', stem, palace_idx, 'di_pan_stems', stem, stem_idx)
+                    self._add_to_index(index, 'tianGan', stem, palace_idx, 'di_pan_stem', stem, stem_idx)
             
             # 处理地盘星 (di_pan_star)
             if palace.di_pan_star:

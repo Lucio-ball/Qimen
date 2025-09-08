@@ -335,15 +335,23 @@ class AnnotationPanelWidget(QWidget):
         select_layout = QHBoxLayout()
         select_layout.addWidget(QLabel("选择模板:"))
         self.template_combo = QComboBox()
-        self.template_combo.addItem("请选择模板...")
-        self.template_combo.addItems(list(self.templates.keys()))
+        self._load_template_combo()
         select_layout.addWidget(self.template_combo)
         template_layout.addLayout(select_layout)
+        
+        # 按钮布局
+        button_layout = QHBoxLayout()
         
         # 应用按钮
         self.apply_template_button = QPushButton("应用模板到当前图层")
         self.apply_template_button.setEnabled(False)
-        template_layout.addWidget(self.apply_template_button)
+        button_layout.addWidget(self.apply_template_button)
+        
+        # 管理模板按钮
+        self.manage_template_button = QPushButton("管理模板...")
+        button_layout.addWidget(self.manage_template_button)
+        
+        template_layout.addLayout(button_layout)
         
         # 模板预览
         preview_group = QGroupBox("模板预览")
@@ -411,6 +419,7 @@ class AnnotationPanelWidget(QWidget):
         # 模板选项卡信号
         self.template_combo.currentTextChanged.connect(self._on_template_selected)
         self.apply_template_button.clicked.connect(self._apply_template)
+        self.manage_template_button.clicked.connect(self._open_template_manager)
         
         # 图层选项卡信号
         self.layer_list.itemSelectionChanged.connect(self._on_layer_selection_changed)
@@ -553,10 +562,13 @@ class AnnotationPanelWidget(QWidget):
         for item in template_data:
             param_type = item.get("param_type", "")
             param_value = item.get("param_value")
+            param_name = item.get("param_name")  # 特殊参数使用param_name
             label = item.get("label", "标注")
             
             # 根据参数类型查找匹配的参数ID
-            matching_param_ids = self._find_matching_params(param_type, param_value)
+            # 对于特殊参数，使用param_name；对于其他类型，使用param_value
+            search_value = param_name if param_type == "special" else param_value
+            matching_param_ids = self._find_matching_params(param_type, search_value)
             
             for param_id in matching_param_ids:
                 # 添加标注到图层
@@ -678,6 +690,19 @@ class AnnotationPanelWidget(QWidget):
                         continue
                     if palace.god in possible_values:
                         matching_ids.append(f"palace_{palace.index}_zhi_fu")
+                        
+        elif param_type == "special":
+            # 特殊参数 - 从chart_result的特殊参数中查找
+            param_name = param_value  # 对于特殊参数，param_value就是参数名称（如"年命"、"太岁"等）
+            if hasattr(chart_result, 'special_params') and param_name in chart_result.special_params:
+                # 特殊参数的值是包含详细信息的字典列表，需要提取id字段
+                param_data_list = chart_result.special_params[param_name]
+                for param_data in param_data_list:
+                    if isinstance(param_data, dict) and 'id' in param_data:
+                        matching_ids.append(param_data['id'])
+                    elif isinstance(param_data, str):
+                        # 向后兼容：如果是字符串，直接使用
+                        matching_ids.append(param_data)
                         
         return matching_ids
         
@@ -1074,3 +1099,35 @@ class AnnotationPanelWidget(QWidget):
         if hasattr(self, 'current_case') and self.current_case:
             # 触发图表刷新，传入一个空的参数ID
             self.annotation_edited.emit("", {})
+            
+    def _load_template_combo(self):
+        """加载模板下拉框"""
+        self.template_combo.clear()
+        self.template_combo.addItem("请选择模板...")
+        
+        # 只加载非_default_的模板
+        for template_name in self.templates.keys():
+            if template_name != "_default_":
+                self.template_combo.addItem(template_name)
+                
+    def _open_template_manager(self):
+        """打开模板管理器"""
+        from ..dialogs.template_manager_dialog import TemplateManagerDialog
+        
+        dialog = TemplateManagerDialog(self)
+        dialog.templates_changed.connect(self._on_templates_changed)
+        dialog.exec()
+        
+    def _on_templates_changed(self):
+        """模板发生变化时的处理"""
+        # 重新加载模板数据
+        self._load_templates()
+        
+        # 刷新下拉框
+        self._load_template_combo()
+        
+        # 清空预览
+        self.template_preview.clear()
+        
+        # 重置应用按钮状态
+        self.apply_template_button.setEnabled(False)

@@ -1,34 +1,61 @@
 {
+  "_default_": [
+    {
+      "param_type": "special",
+      "param_name": "太岁",
+      "label": "太岁"
+    },
+    {
+      "param_type": "special",
+      "param_name": "月干",
+      "label": "月干"
+    },
+    {
+      "param_type": "special",
+      "param_name": "日干",
+      "label": "日干"
+    },
+    {
+      "param_type": "special",
+      "param_name": "时干",
+      "label": "时干"
+    },
+    {
+      "param_type": "special",
+      "param_name": "年命",
+      "label": "年命"
+    }
+  ],
   "婚姻恋爱": [
     {
       "param_type": "baShen",
-      "param_value": "合",
-      "label": "六合(婚配)"
+      "label": "婚姻",
+      "param_value": "合"
     },
     {
       "param_type": "tianGan",
-      "param_value": "乙",
-      "label": "乙奇(女性)"
+      "label": "乙奇(女性)",
+      "param_value": "乙"
     },
     {
-      "param_type": "tianGan", 
-      "param_value": "庚",
-      "label": "庚金(男性)"
-    },
-    {
-      "param_type": "jiuXing",
-      "param_value": "芮",
-      "label": "天芮(妻妾)"
+      "param_type": "tianGan",
+      "label": "庚金(男性)",
+      "param_value": "庚"
     },
     {
       "param_type": "jiuXing",
-      "param_value": "禽",
-      "label": "天禽(媒人)"
+      "label": "天芮(妻妾)",
+      "param_value": "芮"
+    },
+    {
+      "param_type": "jiuXing",
+      "label": "天禽(媒人)",
+      "param_value": "禽"
     },
     {
       "param_type": "baMen",
-      "param_value": "休",
-      "label": "休门(婚姻)"
+      "label": "休门(婚姻)",
+      "param_value": "休"
     }
   ],
   "工作晋升": [

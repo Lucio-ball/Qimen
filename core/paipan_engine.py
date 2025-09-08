@@ -666,8 +666,10 @@ class PaiPanEngine:
                         shi_zhu = chart_result.si_zhu['时'][:2]  # 取前两个字符（去掉"时"字）
                         xun_shou_gan = self._find_xun_shou_gan(shi_zhu)
                     
-                    # 使用旬首遁干查询地盘位置
-                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    # 使用旬首遁干查询天盘位置
+                    all_locations = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    # 只保留天盘干位置，过滤掉地盘干位置
+                    location_list = [loc for loc in all_locations if loc.get('attribute_name') == 'tian_pan_stem']
                 elif param_name in ['太岁', '月干']:
                     # 对于太岁和月干，需要根据年干支或月干支查找旬首遁干
                     if param_name == '太岁':
@@ -677,15 +679,21 @@ class PaiPanEngine:
                         yue_zhu = chart_result.si_zhu['月'][:2]  # 取前两个字符（去掉"月"字）
                         xun_shou_gan = self._find_xun_shou_gan(yue_zhu)
                     
-                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    all_locations = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    # 只保留天盘干位置，过滤掉地盘干位置
+                    location_list = [loc for loc in all_locations if loc.get('attribute_name') == 'tian_pan_stem']
                 else:  # 年命
                     # 年命的甲也需要查找旬首遁干
                     nian_ming_zhu = self._get_nian_ming_zhu(chart_result)
                     xun_shou_gan = self._find_xun_shou_gan(nian_ming_zhu)
-                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    all_locations = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                    # 只保留天盘干位置，过滤掉地盘干位置
+                    location_list = [loc for loc in all_locations if loc.get('attribute_name') == 'tian_pan_stem']
             else:
-                # 非甲的情况，直接查询地盘位置
-                location_list = chart_result.index.get('tianGan', {}).get(gan, [])
+                # 非甲的情况，直接查询天盘位置
+                all_locations = chart_result.index.get('tianGan', {}).get(gan, [])
+                # 只保留天盘干位置，过滤掉地盘干位置
+                location_list = [loc for loc in all_locations if loc.get('attribute_name') == 'tian_pan_stem']
             
             special_params[param_name] = location_list
             
@@ -716,9 +724,12 @@ class PaiPanEngine:
         Returns:
             str: 年命天干
         """
-        # 这里需要根据具体的年命计算规则来实现
-        # 暂时返回年干作为示例，实际实现需要根据年命计算规则
-        return chart_result.si_zhu['年'][0]  # 取年干
+        # 如果有设置年命，直接取年命的第一个字符（天干）
+        if hasattr(chart_result, 'nian_ming') and chart_result.nian_ming:
+            return chart_result.nian_ming[0]  # 取年命天干，如年命"庚辰"取"庚"
+        else:
+            # 如果没有设置年命，返回年干作为默认值
+            return chart_result.si_zhu['年'][0]  # 取年干
     
     def _get_nian_ming_zhu(self, chart_result: ChartResult) -> str:
         """
@@ -730,6 +741,9 @@ class PaiPanEngine:
         Returns:
             str: 年命完整干支
         """
-        # 这里需要根据具体的年命计算规则来实现
-        # 暂时返回年柱作为示例，实际实现需要根据年命计算规则
-        return chart_result.si_zhu['年'][:2]  # 取年干支，去掉"年"字
+        # 如果有设置年命，直接返回年命干支
+        if hasattr(chart_result, 'nian_ming') and chart_result.nian_ming:
+            return chart_result.nian_ming  # 返回完整年命，如"庚辰"
+        else:
+            # 如果没有设置年命，返回年柱作为默认值
+            return chart_result.si_zhu['年'][:2]  # 取年干支，去掉"年"字
