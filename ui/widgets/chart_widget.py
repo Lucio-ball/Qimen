@@ -166,6 +166,7 @@ class ChartWidget(QWidget):
         info_items = [
             ('jieqi', '节气'),
             ('jushu', '局数'),
+            ('nianming', '年命'),
             ('zhifu', '值符'),
             ('zhishi', '值使'),
             ('maxing', '马星'),
@@ -389,6 +390,10 @@ class ChartWidget(QWidget):
         
         jushu_text = f"{chart_data.ju_shu_info.get('遁', '')}{chart_data.ju_shu_info.get('局', '')}局"
         self.info_labels['jushu'].setText(jushu_text)
+        
+        # 年命显示：如果有年命信息则显示，如庚午
+        nianming_text = chart_data.nian_ming if hasattr(chart_data, 'nian_ming') and chart_data.nian_ming else "-"
+        self.info_labels['nianming'].setText(nianming_text)
         
         self.info_labels['zhifu'].setText(chart_data.zhi_fu)
         self.info_labels['zhishi'].setText(chart_data.zhi_shi)

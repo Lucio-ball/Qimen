@@ -318,6 +318,10 @@ class IntegratedMainWindow(QMainWindow):
             # 使用排盘引擎计算
             chart_result = self.engine.paipan(time_str)
             
+            # 设置年命信息
+            if 'nian_ming' in query_data and query_data['nian_ming']:
+                chart_result.nian_ming = query_data['nian_ming']
+            
             # 生成案例标题
             self.case_counter += 1
             case_title = f"案例{self.case_counter}"
@@ -344,6 +348,10 @@ class IntegratedMainWindow(QMainWindow):
             
             # 存储图表数据到标签页（用于后续操作）
             chart_widget.chart_data = chart_result
+            
+            # 同步标注面板显示当前案例
+            if self.annotation_panel_widget:
+                self.annotation_panel_widget.set_case(case)
             
             # 自动打开标注面板
             if hasattr(self, 'annotation_dock') and self.annotation_dock:

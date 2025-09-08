@@ -54,8 +54,12 @@ class ChartResult:
         self.maxing_chongdong_targets: List[Dict[str, str]] = []
         # 起局时间（用于显示）
         self.qi_ju_time: str = ""
+        # 年命干支（用于显示）
+        self.nian_ming: str = ""
         # 反向查询索引
         self.index: dict = {}
+        # 新增属性: 存放太岁、月干、日干、时干、年命的真实盘面落点
+        self.special_params: Dict[str, List[Dict]] = {}
 
     def _build_index(self) -> dict:
         """构建反向查询索引"""

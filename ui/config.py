@@ -24,6 +24,8 @@ class DisplayConfig:
     show_ru_mu: bool = True  # 显示入墓
     show_ma_xing: bool = True  # 显示马星
     show_yue_ling: bool = True  # 显示月令
+    show_di_pan_gate: bool = True  # 显示地盘门
+    show_di_pan_star: bool = True  # 显示地盘星
     
     # 原有的数值配置
     annotation_background_alpha: int = 128  # 标注背景透明度 (0-255)

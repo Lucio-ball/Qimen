@@ -27,7 +27,7 @@ class AnnotationDialog(QDialog):
         
     def _setup_ui(self):
         """设置UI界面"""
-        self.setWindowTitle(f"管理标注 - {self.param_name}")
+        self.setWindowTitle(f"标注管理 - {self.param_name}")
         self.setModal(True)
         self.resize(400, 300)
         
@@ -180,18 +180,12 @@ class AnnotationDialog(QDialog):
             
         row = self.annotation_list.row(current_item)
         
-        # 确认删除
-        reply = QMessageBox.question(self, "确认删除", 
-                                   f"确定要删除标注 '{current_item.text()}' 吗？",
-                                   QMessageBox.Yes | QMessageBox.No)
+        # 直接删除，不需要确认对话框
+        if 0 <= row < len(self.annotations):
+            self.annotations.pop(row)
         
-        if reply == QMessageBox.Yes:
-            # 从数据中删除
-            if 0 <= row < len(self.annotations):
-                self.annotations.pop(row)
-            
-            # 重新加载列表
-            self._load_annotations()
+        # 重新加载列表
+        self._load_annotations()
             
     def _move_up(self):
         """上移选中的标注"""

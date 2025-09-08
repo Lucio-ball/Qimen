@@ -49,6 +49,7 @@ class ParameterWidget(QWidget):
         self._color: QColor = QColor(0, 0, 0)  # 默认黑色
         self._is_bold: bool = False
         self._is_selected: bool = False
+        self._style_type: str = "primary"  # 样式类型，primary为主要样式，secondary为次要样式
         
         # 标注相关
         self._param_id: str = ""  # 唯一的参数标识符
@@ -67,7 +68,7 @@ class ParameterWidget(QWidget):
         
     def set_data(self, text: str, config: DisplayConfig, color: QColor, 
                  is_bold: bool, param_id: str = "", annotation_texts: Optional[List[str]] = None,
-                 dual_stars: Optional[List[str]] = None):
+                 dual_stars: Optional[List[str]] = None, style_type: str = "primary"):
         """
         设置控件的显示数据和配置
         
@@ -78,7 +79,8 @@ class ParameterWidget(QWidget):
             is_bold: 布尔值，决定文本是否加粗
             param_id: 字符串，唯一的参数标识符 (e.g., "palace_7_heaven_stem_0")
             annotation_texts: 标注文本列表 (e.g., ["用神", "丈夫"])
-            dual_stars: 双星列表，用于禽芮等情况 (e.g., ["禽", "芮"])
+            dual_stars: 双星列表，用于禽芮等情况 (e.g., ["芮", "禽"])
+            style_type: 样式类型，'primary'为主要样式（天盘），'secondary'为次要样式（地盘）
         """
         self._text = text
         self._config = config
@@ -87,6 +89,7 @@ class ParameterWidget(QWidget):
         self._param_id = param_id
         self._annotation_texts = annotation_texts or []
         self._dual_stars = dual_stars or []  # 存储双星信息
+        self._style_type = style_type  # 存储样式类型
         
         # 触发重绘
         self.update()
@@ -188,24 +191,39 @@ class ParameterWidget(QWidget):
             
         # 根据文本长度和内容调整字体大小
         text_len = len(self._text)
+        base_size = 16  # 主要样式的基础字体大小
+        
+        # 如果是次要样式（地盘），字体大小减小
+        if self._style_type == "secondary":
+            base_size = 12  # 地盘信息使用较小字体
+        
         if text_len == 0:
             font.setPointSize(10)  # 空文本
         elif text_len == 1:
-            font.setPointSize(16)  # 单字符，如"蓬"、"生"
+            font.setPointSize(base_size)  # 单字符，如"蓬"、"生"
         elif text_len == 2:
-            font.setPointSize(14)  # 双字符，如"天蓬"、"生门"、"禽芮"
+            font.setPointSize(base_size - 2)  # 双字符，如"天蓬"、"生门"、"禽芮"
         elif text_len <= 4:
-            font.setPointSize(10)  # 3-4字符，如"值符"、"三奇局"
+            font.setPointSize(base_size - 6)  # 3-4字符，如"值符"、"三奇局"
         else:
-            font.setPointSize(8)   # 更长文本
+            font.setPointSize(base_size - 8)   # 更长文本
             
         painter.setFont(font)
         
         # 设置颜色
         if self._config.use_wuxing_colors:
-            painter.setPen(QPen(self._color))
+            color = self._color
+            # 如果是次要样式（地盘），颜色调为较浅的灰色调
+            if self._style_type == "secondary":
+                # 将颜色转换为较浅的灰色调
+                color = QColor(128, 128, 128)  # 中等灰色
+            painter.setPen(QPen(color))
         else:
-            painter.setPen(QPen(QColor(0, 0, 0)))  # 默认黑色
+            # 根据样式类型设置颜色
+            if self._style_type == "secondary":
+                painter.setPen(QPen(QColor(128, 128, 128)))  # 次要样式使用灰色
+            else:
+                painter.setPen(QPen(QColor(0, 0, 0)))  # 默认黑色
             
         # 绘制文本（居中）
         text_rect = QRect(0, 0, self.width(), self.height())
@@ -265,7 +283,7 @@ class ParameterWidget(QWidget):
         char_width = text_width // len(self._text) if self._text else 0
         
         # 计算两个字符的中心位置
-        first_char_x = center_x - text_width // 2 + char_width // 2  # 第一个字符"禽"的中心
+        first_char_x = center_x - text_width // 2 + char_width // 2  # 第一个字符"芮"的中心
         second_char_x = center_x + text_width // 2 - char_width // 2  # 第二个字符"芮"的中心
         
         # 分离双星的标注
@@ -280,15 +298,19 @@ class ParameterWidget(QWidget):
                 # 移除前缀，只保留标注内容
                 star2_annotations.append(annotation[len(f"{self._dual_stars[1]}:"):])
         
-        # 绘制第一个星的标注（禽字位置）
+        # 绘制第一个星的标注（禽字位置）- 但显示在下方
         if star1_annotations:
+            # 对于禽芮组合，禽星标注显示在下方
+            position = "bottom" if self._dual_stars == ["禽", "芮"] else "top"
             self._draw_star_circle_and_text(painter, first_char_x, center_y, radius, 
-                                          star1_annotations, self._dual_stars[0], "top")
+                                          star1_annotations, self._dual_stars[0], position)
         
-        # 绘制第二个星的标注（芮字位置）
+        # 绘制第二个星的标注（芮字位置）- 但显示在上方
         if star2_annotations:
+            # 对于禽芮组合，芮星标注显示在上方
+            position = "top" if self._dual_stars == ["禽", "芮"] else "bottom"
             self._draw_star_circle_and_text(painter, second_char_x, center_y, radius, 
-                                          star2_annotations, self._dual_stars[1], "bottom")
+                                          star2_annotations, self._dual_stars[1], position)
     
     def _draw_star_circle_and_text(self, painter: QPainter, x: int, y: int, radius: int, 
                                    annotations: List[str], star_name: str, position: str):
@@ -308,41 +330,19 @@ class ParameterWidget(QWidget):
         # 合并标注文本，不添加星名前缀
         combined_text = "、".join(annotations)
         
-        # 根据位置调整文字显示区域
+        # 根据星字位置和标注位置需求，调整文字显示区域
         if position == "top":
-            # 上方圆圈，文字显示在圆圈上方
-            text_rect = QRect(0, 0, self.width(), 12)
+            # 芮星标注显示在芮字附近的上方
+            # 芮字在右侧，标注也在右侧上方
+            text_x = x - 20  # 从星字中心往左偏移
+            text_y = y - radius - 15  # 圆圈上方
+            text_rect = QRect(text_x, text_y, 40, 12)
         else:  # bottom
-            # 下方圆圈，文字显示在圆圈下方
-            text_rect = QRect(0, self.height() - 12, self.width(), 12)
-        
-        painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, combined_text)
-    
-    def _draw_star_circle_and_text(self, painter: QPainter, x: int, y: int, radius: int, 
-                                   annotations: List[str], star_name: str, position: str):
-        """绘制单个星的圆圈和标注文本"""
-        # 绘制圆圈
-        painter.setBrush(QBrush(Qt.BrushStyle.NoBrush))
-        painter.setPen(QPen(QColor(255, 0, 0), 2))
-        painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
-        
-        # 设置字体
-        annotation_font = QFont()
-        annotation_font.setPointSize(6)  # 适中的字体大小
-        annotation_font.setBold(True)
-        painter.setFont(annotation_font)
-        painter.setPen(QPen(QColor(255, 0, 0)))
-        
-        # 合并标注文本，不添加星名前缀
-        combined_text = "、".join(annotations)
-        
-        # 根据位置调整文字显示区域
-        if position == "top":
-            # 上方圆圈（禽），文字显示在上方，稍微往左偏移
-            text_rect = QRect(0, 0, self.width() - 10, 12)  # 往左偏移
-        else:  # bottom
-            # 下方圆圈（芮），文字显示在下方，稍微往右偏移
-            text_rect = QRect(10, self.height() - 12, self.width() - 10, 12)  # 往右偏移
+            # 禽星标注显示在禽字附近的下方  
+            # 禽字在左侧，标注也在左侧下方
+            text_x = x - 20  # 从星字中心往左偏移
+            text_y = y + radius + 3   # 圆圈下方
+            text_rect = QRect(text_x, text_y, 40, 12)
         
         painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, combined_text)
     

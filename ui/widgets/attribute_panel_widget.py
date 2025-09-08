@@ -77,6 +77,8 @@ class AttributePanelWidget(QWidget):
         self.checkboxes['show_ru_mu'] = QCheckBox("显示入墓")
         self.checkboxes['show_ma_xing'] = QCheckBox("显示马星")
         self.checkboxes['show_yue_ling'] = QCheckBox("显示月令")
+        self.checkboxes['show_di_pan_gate'] = QCheckBox("显示地盘门")
+        self.checkboxes['show_di_pan_star'] = QCheckBox("显示地盘星")
         
         # 添加参数复选框到布局
         param_layout.addWidget(self.checkboxes['show_ri_kong'])
@@ -85,6 +87,8 @@ class AttributePanelWidget(QWidget):
         param_layout.addWidget(self.checkboxes['show_ru_mu'])
         param_layout.addWidget(self.checkboxes['show_ma_xing'])
         param_layout.addWidget(self.checkboxes['show_yue_ling'])
+        param_layout.addWidget(self.checkboxes['show_di_pan_gate'])
+        param_layout.addWidget(self.checkboxes['show_di_pan_star'])
         
         # 添加分组到主布局
         main_layout.addWidget(style_group)
@@ -113,6 +117,8 @@ class AttributePanelWidget(QWidget):
         self.checkboxes['show_ru_mu'].setChecked(self.initial_config.show_ru_mu)
         self.checkboxes['show_ma_xing'].setChecked(self.initial_config.show_ma_xing)
         self.checkboxes['show_yue_ling'].setChecked(self.initial_config.show_yue_ling)
+        self.checkboxes['show_di_pan_gate'].setChecked(self.initial_config.show_di_pan_gate)
+        self.checkboxes['show_di_pan_star'].setChecked(self.initial_config.show_di_pan_star)
     
     def _on_checkbox_changed(self):
         """
@@ -144,6 +150,8 @@ class AttributePanelWidget(QWidget):
             show_ru_mu=self.checkboxes['show_ru_mu'].isChecked(),
             show_ma_xing=self.checkboxes['show_ma_xing'].isChecked(),
             show_yue_ling=self.checkboxes['show_yue_ling'].isChecked(),
+            show_di_pan_gate=self.checkboxes['show_di_pan_gate'].isChecked(),
+            show_di_pan_star=self.checkboxes['show_di_pan_star'].isChecked(),
             
             # 保持原有的数值配置
             annotation_background_alpha=self.initial_config.annotation_background_alpha,

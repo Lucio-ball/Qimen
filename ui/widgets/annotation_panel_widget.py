@@ -16,10 +16,11 @@ import os
 
 class AnnotationListItem(QListWidgetItem):
     """标注列表项 - 支持多重标注显示"""
-    def __init__(self, param_id: str, annotations: List[Dict[str, str]]):
+    def __init__(self, param_id: str, annotations: List[Dict[str, str]], format_param_id_func=None):
         super().__init__()
         self.param_id = param_id
         self.annotations = annotations
+        self.format_param_id_func = format_param_id_func
         self._update_display()
         
     def _update_display(self):
@@ -41,7 +42,10 @@ class AnnotationListItem(QListWidgetItem):
         self.setIcon(icon)
         
         # 设置显示文本（参数ID + 标注文本）
-        param_display = self._format_param_id(self.param_id)
+        if self.format_param_id_func:
+            param_display = self.format_param_id_func(self.param_id)
+        else:
+            param_display = self.param_id  # 回退到原始ID
         self.setText(f"{param_display}: {combined_text}")
         
         # 如果有多个标注，在tooltip中显示详细信息
@@ -75,48 +79,6 @@ class AnnotationListItem(QListWidgetItem):
         
         painter.end()
         return QIcon(pixmap)
-        
-    def _format_param_id(self, param_id: str) -> str:
-        """格式化参数ID为人类可读形式"""
-        # 例如: "palace_7_heaven_stem_0" -> "七宫-天盘干-1"
-        parts = param_id.split('_')
-        if len(parts) >= 3 and parts[0] == 'palace':
-            palace_num = parts[1]
-            param_type = parts[2]
-            
-            # 宫位中文映射
-            palace_map = {
-                '1': '一宫', '2': '二宫', '3': '三宫', '4': '四宫',
-                '5': '五宫', '6': '六宫', '7': '七宫', '8': '八宫', '9': '九宫'
-            }
-            
-            # 参数类型映射
-            type_map = {
-                'heaven': '天盘干',
-                'earth': '地盘干', 
-                'star': '九星',
-                'gate': '八门',
-                'god': '八神',
-                'ju': '局数'
-            }
-            
-            palace_name = palace_map.get(palace_num, f"{palace_num}宫")
-            
-            # 处理复合类型 (如 heaven_stem)
-            if len(parts) >= 4 and param_type in ['heaven', 'earth']:
-                type_key = param_type
-                type_name = type_map.get(type_key, param_type)
-                
-                if len(parts) >= 5 and parts[4].isdigit():  # 有索引
-                    index = int(parts[4]) + 1  # 0-based转1-based
-                    return f"{palace_name}-{type_name}-{index}"
-                else:
-                    return f"{palace_name}-{type_name}"
-            else:
-                type_name = type_map.get(param_type, param_type)
-                return f"{palace_name}-{type_name}"
-        
-        return param_id  # fallback
 
 
 class LayerListItem(QListWidgetItem):
@@ -165,6 +127,86 @@ class AnnotationPanelWidget(QWidget):
         self._setup_ui()
         self._connect_signals()
         
+    def _format_param_id(self, param_id: str) -> str:
+        """格式化参数ID为人类可读形式"""
+        # 例如: "palace_7_tian_pan_stem_0" -> "七宫-天盘干-1"
+        parts = param_id.split('_')
+        if len(parts) >= 3 and parts[0] == 'palace':
+            palace_num = parts[1]
+            
+            # 宫位中文映射
+            palace_map = {
+                '1': '一宫', '2': '二宫', '3': '三宫', '4': '四宫',
+                '5': '五宫', '6': '六宫', '7': '七宫', '8': '八宫', '9': '九宫'
+            }
+            
+            palace_name = palace_map.get(palace_num, f"{palace_num}宫")
+            
+            # 重新组合剩余部分来检查类型
+            remaining_parts = parts[2:]
+            param_type_str = '_'.join(remaining_parts)
+            
+            # 处理天盘干：tian_pan_stem_X
+            if param_type_str.startswith('tian_pan_stem'):
+                if len(parts) >= 5 and parts[4].isdigit():
+                    index = int(parts[4]) + 1
+                    return f"{palace_name}-天盘干-{index}"
+                else:
+                    return f"{palace_name}-天盘干"
+            
+            # 处理天盘星：tian_pan_star_X 或 tian_pan_star_X_星名
+            elif param_type_str.startswith('tian_pan_star'):
+                if len(parts) >= 6 and not parts[5].isdigit():  # 双星格式：palace_X_tian_pan_star_0_星名
+                    star_name = parts[5]
+                    return f"{palace_name}-天盘星({star_name})"
+                elif len(parts) >= 5 and parts[4].isdigit():
+                    index = int(parts[4]) + 1
+                    return f"{palace_name}-天盘星-{index}"
+                else:
+                    return f"{palace_name}-天盘星"
+            
+            # 处理天盘门：tian_pan_gate_X
+            elif param_type_str.startswith('tian_pan_gate'):
+                return f"{palace_name}-天盘门"
+            
+            # 处理地盘干：di_pan_stem_X
+            elif param_type_str.startswith('di_pan_stem'):
+                if len(parts) >= 5 and parts[4].isdigit():
+                    index = int(parts[4]) + 1
+                    return f"{palace_name}-地盘干-{index}"
+                else:
+                    return f"{palace_name}-地盘干"
+            
+            # 处理地盘星：di_pan_star
+            elif param_type_str.startswith('di_pan_star'):
+                return f"{palace_name}-地盘星"
+            
+            # 处理地盘门：di_pan_gate
+            elif param_type_str.startswith('di_pan_gate'):
+                return f"{palace_name}-地盘门"
+            
+            # 处理八神：zhi_fu
+            elif param_type_str == 'zhi_fu':
+                return f"{palace_name}-八神"
+            
+            # 兼容旧格式
+            elif len(parts) >= 3:
+                param_type = parts[2]
+                if param_type in ['heaven', 'earth']:
+                    type_map = {'heaven': '天盘干', 'earth': '地盘干'}
+                    type_name = type_map[param_type]
+                    if len(parts) >= 4 and parts[3].isdigit():
+                        index = int(parts[3]) + 1
+                        return f"{palace_name}-{type_name}-{index}"
+                    else:
+                        return f"{palace_name}-{type_name}"
+                elif param_type in ['star', 'gate', 'god']:
+                    type_map = {'star': '九星', 'gate': '八门', 'god': '八神'}
+                    type_name = type_map[param_type]
+                    return f"{palace_name}-{type_name}"
+        
+        return param_id  # fallback
+        
     def _load_templates(self):
         """加载模板数据"""
         try:
@@ -187,7 +229,7 @@ class AnnotationPanelWidget(QWidget):
         layout.setContentsMargins(5, 5, 5, 5)
         
         # 标题
-        title_label = QLabel("标注管理 v2.0")
+        title_label = QLabel("标注管理")
         title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #333;")
         layout.addWidget(title_label)
         
@@ -400,7 +442,7 @@ class AnnotationPanelWidget(QWidget):
         total_annotations = 0
         for param_id, annotations_list in active_annotations.items():
             if annotations_list:  # 只显示非空的标注列表
-                item = AnnotationListItem(param_id, annotations_list)
+                item = AnnotationListItem(param_id, annotations_list, self._format_param_id)
                 self.annotation_list.addItem(item)
                 total_annotations += len(annotations_list)
             
@@ -554,7 +596,7 @@ class AnnotationPanelWidget(QWidget):
                         continue
                     for i, stem in enumerate(palace.heaven_stems):
                         if stem == ri_gan_char:
-                            matching_ids.append(f"palace_{palace.index}_heaven_stem_{i}")
+                            matching_ids.append(f"palace_{palace.index}_tian_pan_stem_{i}")
                             
         elif param_type == "zhiFu":
             # 值符 - 查找值符星
@@ -564,7 +606,7 @@ class AnnotationPanelWidget(QWidget):
                     continue
                 for i, star in enumerate(palace.stars):
                     if star == zhi_fu:
-                        matching_ids.append(f"palace_{palace.index}_star_{i}")
+                        matching_ids.append(f"palace_{palace.index}_tian_pan_star_{i}")
                         
         elif param_type == "zhiShi":
             # 值使 - 查找值使门
@@ -573,7 +615,7 @@ class AnnotationPanelWidget(QWidget):
                 if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                     continue
                 if palace.gates == zhi_shi:
-                    matching_ids.append(f"palace_{palace.index}_gate")
+                    matching_ids.append(f"palace_{palace.index}_tian_pan_gate_0")
                         
         elif param_type == "tianGan":
             # 天干 - 查找指定的天干
@@ -583,7 +625,7 @@ class AnnotationPanelWidget(QWidget):
                         continue
                     for i, stem in enumerate(palace.heaven_stems):
                         if stem == param_value:
-                            matching_ids.append(f"palace_{palace.index}_heaven_stem_{i}")
+                            matching_ids.append(f"palace_{palace.index}_tian_pan_stem_{i}")
                             
         elif param_type == "jiuXing":
             # 九星 - 查找指定的九星
@@ -591,9 +633,17 @@ class AnnotationPanelWidget(QWidget):
                 for palace in chart_result.palaces:
                     if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                         continue
-                    for i, star in enumerate(palace.stars):
-                        if star == param_value:
-                            matching_ids.append(f"palace_{palace.index}_star_{i}")
+                    
+                    # 检查是否为双星情况
+                    if len(palace.stars) == 2:
+                        # 双星情况：如果指定的星在双星中，使用双星ID格式
+                        if param_value in palace.stars:
+                            matching_ids.append(f"palace_{palace.index}_tian_pan_star_0_{param_value}")
+                    else:
+                        # 单星情况：使用原有逻辑
+                        for i, star in enumerate(palace.stars):
+                            if star == param_value:
+                                matching_ids.append(f"palace_{palace.index}_tian_pan_star_{i}")
                             
         elif param_type == "baMen":
             # 八门 - 查找指定的八门
@@ -602,16 +652,32 @@ class AnnotationPanelWidget(QWidget):
                     if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                         continue
                     if palace.gates == param_value:
-                        matching_ids.append(f"palace_{palace.index}_gate")
+                        matching_ids.append(f"palace_{palace.index}_tian_pan_gate_0")
                         
         elif param_type == "baShen":
             # 八神 - 查找指定的八神
             if param_value:
+                # 构建八神名称映射（短名称 -> 完整名称）
+                ba_shen_name_map = {
+                    "符": "直符", "蛇": "螣蛇", "阴": "太阴", "合": "六合",
+                    "虎": "白虎", "武": "玄武", "地": "九地", "天": "九天"
+                }
+                
+                # 获取可能的匹配值（支持短名称和完整名称）
+                possible_values = [param_value]
+                if param_value in ba_shen_name_map:
+                    possible_values.append(ba_shen_name_map[param_value])
+                elif param_value in ba_shen_name_map.values():
+                    # 如果是完整名称，找到对应的短名称
+                    short_name = next((k for k, v in ba_shen_name_map.items() if v == param_value), None)
+                    if short_name:
+                        possible_values.append(short_name)
+                
                 for palace in chart_result.palaces:
                     if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                         continue
-                    if palace.god == param_value:
-                        matching_ids.append(f"palace_{palace.index}_god")
+                    if palace.god in possible_values:
+                        matching_ids.append(f"palace_{palace.index}_zhi_fu")
                         
         return matching_ids
         
@@ -932,8 +998,11 @@ class AnnotationPanelWidget(QWidget):
         # 获取当前标注列表（不添加默认项）
         current_annotations = active_layer["annotations"].get(param_id, [])
         
+        # 获取友好的中文名称
+        param_display_name = self._format_param_id(param_id)
+        
         # 创建对话框
-        dialog = AnnotationDialog(param_id, param_id, current_annotations, self)
+        dialog = AnnotationDialog(param_id, param_display_name, current_annotations, self)
         
         if dialog.exec():
             # 获取用户编辑后的标注列表

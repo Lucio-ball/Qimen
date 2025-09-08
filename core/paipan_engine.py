@@ -121,6 +121,9 @@ class PaiPanEngine:
         
         # 步骤 13: 构建反向查询索引
         result.index = result._build_index()
+        
+        # 步骤 14: 分析特殊参数（四柱、年命）的盘面定位
+        result.special_params = self._analyze_special_params(result)
 
         return result
 
@@ -619,3 +622,114 @@ class PaiPanEngine:
                     })
                     
         return found_targets
+
+    def _analyze_special_params(self, chart_result: ChartResult) -> Dict[str, List[Dict]]:
+        """
+        分析特殊参数（四柱、年命）的盘面定位算法
+        
+        Args:
+            chart_result: 已经填充了si_zhu, nian_ming_gan, index等信息的chart_result对象
+            
+        Returns:
+            Dict[str, List[Dict]]: 键为"太岁", "月干", "日干", "时干", "年命"，值为location_obj的列表
+        """
+        special_params = {}
+        
+        # 从四柱中提取天干
+        nian_gan = chart_result.si_zhu['年'][0]  # 取第一个字符
+        yue_gan = chart_result.si_zhu['月'][0]   # 取第一个字符
+        ri_gan = chart_result.si_zhu['日'][0]    # 取第一个字符
+        shi_gan = chart_result.si_zhu['时'][0]   # 取第一个字符
+        
+        # 计算年命干支
+        nian_ming_gan = self._calculate_nian_ming_gan(chart_result)
+        
+        # 创建需要分析的目标列表
+        targets = [
+            ('太岁', nian_gan),
+            ('月干', yue_gan),
+            ('日干', ri_gan),
+            ('时干', shi_gan),
+            ('年命', nian_ming_gan)
+        ]
+        
+        # 遍历targets列表
+        for param_name, gan in targets:
+            if gan == '甲':
+                # 处理甲的特殊情况 - 需要查找旬首遁干
+                if param_name in ['日干', '时干']:
+                    # 对于日干和时干，需要根据完整干支查找旬首遁干
+                    if param_name == '日干':
+                        ri_zhu = chart_result.si_zhu['日'][:2]  # 取前两个字符（去掉"日"字）
+                        xun_shou_gan = self._find_xun_shou_gan(ri_zhu)
+                    else:  # 时干
+                        shi_zhu = chart_result.si_zhu['时'][:2]  # 取前两个字符（去掉"时"字）
+                        xun_shou_gan = self._find_xun_shou_gan(shi_zhu)
+                    
+                    # 使用旬首遁干查询地盘位置
+                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                elif param_name in ['太岁', '月干']:
+                    # 对于太岁和月干，需要根据年干支或月干支查找旬首遁干
+                    if param_name == '太岁':
+                        nian_zhu = chart_result.si_zhu['年'][:2]  # 取前两个字符（去掉"年"字）
+                        xun_shou_gan = self._find_xun_shou_gan(nian_zhu)
+                    else:  # 月干
+                        yue_zhu = chart_result.si_zhu['月'][:2]  # 取前两个字符（去掉"月"字）
+                        xun_shou_gan = self._find_xun_shou_gan(yue_zhu)
+                    
+                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+                else:  # 年命
+                    # 年命的甲也需要查找旬首遁干
+                    nian_ming_zhu = self._get_nian_ming_zhu(chart_result)
+                    xun_shou_gan = self._find_xun_shou_gan(nian_ming_zhu)
+                    location_list = chart_result.index.get('tianGan', {}).get(xun_shou_gan, [])
+            else:
+                # 非甲的情况，直接查询地盘位置
+                location_list = chart_result.index.get('tianGan', {}).get(gan, [])
+            
+            special_params[param_name] = location_list
+            
+        return special_params
+    
+    def _find_xun_shou_gan(self, gan_zhi: str) -> str:
+        """
+        根据完整干支查找旬首遁干
+        
+        Args:
+            gan_zhi: 完整干支，如"甲子"、"甲寅"
+            
+        Returns:
+            str: 旬首遁干，如"戊"、"癸"
+        """
+        for jiazi in self.data['liuShiJiaZi']:
+            if f"{jiazi['gan']}{jiazi['zhi']}" == gan_zhi:
+                return jiazi['xun']['jun']
+        raise ValueError(f"未找到干支 {gan_zhi} 对应的旬首遁干")
+    
+    def _calculate_nian_ming_gan(self, chart_result: ChartResult) -> str:
+        """
+        计算年命的天干
+        
+        Args:
+            chart_result: 排盘结果对象
+            
+        Returns:
+            str: 年命天干
+        """
+        # 这里需要根据具体的年命计算规则来实现
+        # 暂时返回年干作为示例，实际实现需要根据年命计算规则
+        return chart_result.si_zhu['年'][0]  # 取年干
+    
+    def _get_nian_ming_zhu(self, chart_result: ChartResult) -> str:
+        """
+        获取年命的完整干支
+        
+        Args:
+            chart_result: 排盘结果对象
+            
+        Returns:
+            str: 年命完整干支
+        """
+        # 这里需要根据具体的年命计算规则来实现
+        # 暂时返回年柱作为示例，实际实现需要根据年命计算规则
+        return chart_result.si_zhu['年'][:2]  # 取年干支，去掉"年"字
