@@ -848,8 +848,14 @@ class IntegratedMainWindow(QMainWindow):
             
     def _create_case_tab(self, case: Case):
         """创建案例标签页"""
-        # 创建ChartWidget并设置案例
-        chart_widget = ChartWidget(self.current_config, case.chart_result, case, self.global_data)
+        # 创建ChartWidget（使用正确的参数顺序）
+        chart_widget = ChartWidget(self.global_data, self.current_config)
+        
+        # 设置图表数据
+        chart_widget.update_chart(case.chart_result)
+        
+        # 将case对象关联到chart_widget
+        chart_widget.case = case
         
         # 连接参数组件信号
         self._connect_parameter_widget_signals(chart_widget)
@@ -859,6 +865,9 @@ class IntegratedMainWindow(QMainWindow):
         
         # 切换到新标签页
         self.central_widget.tab_widget.setCurrentIndex(tab_index)
+        
+        # 切换到多案例页面（确保不在欢迎页面）
+        self.central_widget.show_page(1)
         
         # 更新标注面板
         if self.annotation_panel_widget:
