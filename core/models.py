@@ -34,6 +34,52 @@ class Palace:
             f" 地盘星: {self.di_pan_star}\n"
             f" 地盘门: {self.di_pan_gate}\n"
         )
+        
+    def to_dict(self) -> dict:
+        """序列化为字典"""
+        return {
+            'index': self.index,
+            'zhi_fu': self.zhi_fu,
+            'tian_pan_stars': self.tian_pan_stars,
+            'tian_pan_gates': self.tian_pan_gates,
+            'tian_pan_stems': self.tian_pan_stems,
+            'di_pan_stems': self.di_pan_stems,
+            'di_pan_star': self.di_pan_star,
+            'di_pan_gate': self.di_pan_gate,
+            'wuxing_color': self.wuxing_color,
+            'analysis': self.analysis,
+            # 兼容属性
+            'god': self.god,
+            'stars': self.stars,
+            'gates': self.gates,
+            'heaven_stems': self.heaven_stems,
+            'earth_stems': self.earth_stems,
+            'original_star': self.original_star,
+            'original_gate': self.original_gate
+        }
+        
+    @classmethod
+    def from_dict(cls, data: dict) -> 'Palace':
+        """从字典反序列化"""
+        palace = cls(data['index'])
+        palace.zhi_fu = data.get('zhi_fu', '')
+        palace.tian_pan_stars = data.get('tian_pan_stars', [])
+        palace.tian_pan_gates = data.get('tian_pan_gates', [])
+        palace.tian_pan_stems = data.get('tian_pan_stems', [])
+        palace.di_pan_stems = data.get('di_pan_stems', [])
+        palace.di_pan_star = data.get('di_pan_star', '')
+        palace.di_pan_gate = data.get('di_pan_gate', '')
+        palace.wuxing_color = data.get('wuxing_color', '')
+        palace.analysis = data.get('analysis', {})
+        # 兼容属性
+        palace.god = data.get('god', '')
+        palace.stars = data.get('stars', [])
+        palace.gates = data.get('gates', '')
+        palace.heaven_stems = data.get('heaven_stems', [])
+        palace.earth_stems = data.get('earth_stems', [])
+        palace.original_star = data.get('original_star', '')
+        palace.original_gate = data.get('original_gate', '')
+        return palace
 
 class ChartResult:
     """封装完整的排盘结果"""
@@ -145,11 +191,65 @@ class ChartResult:
         palace_str = "".join([repr(p) for p in self.palaces if p.index != 0 and p.index != 5])
         palace_5_str = repr(self.palaces[5])
         return info_str + "\n" + palace_str + "\n" + palace_5_str
+        
+    def to_dict(self) -> dict:
+        """序列化为字典"""
+        return {
+            'si_zhu': self.si_zhu,
+            'jieqi': self.jieqi,
+            'ju_shu_info': self.ju_shu_info,
+            'shi_chen_xun': self.shi_chen_xun,
+            'zhi_fu': self.zhi_fu,
+            'zhi_shi': self.zhi_shi,
+            'tian_yi': self.tian_yi,
+            'ma_xing': self.ma_xing,
+            'kong_wang': self.kong_wang,
+            'palaces': [palace.to_dict() for palace in self.palaces],
+            'side_annotations': self.side_annotations,
+            'maxing_chongdong_targets': self.maxing_chongdong_targets,
+            'qi_ju_time': self.qi_ju_time,
+            'nian_ming': self.nian_ming,
+            'special_params': self.special_params
+        }
+        
+    @classmethod
+    def from_dict(cls, data: dict) -> 'ChartResult':
+        """从字典反序列化"""
+        chart_result = cls()
+        chart_result.si_zhu = data.get('si_zhu', {})
+        chart_result.jieqi = data.get('jieqi', '')
+        chart_result.ju_shu_info = data.get('ju_shu_info', {})
+        chart_result.shi_chen_xun = data.get('shi_chen_xun', {})
+        chart_result.zhi_fu = data.get('zhi_fu', '')
+        chart_result.zhi_shi = data.get('zhi_shi', '')
+        chart_result.tian_yi = data.get('tian_yi', '')
+        chart_result.ma_xing = data.get('ma_xing', '')
+        chart_result.kong_wang = data.get('kong_wang', {})
+        chart_result.side_annotations = data.get('side_annotations', {})
+        chart_result.maxing_chongdong_targets = data.get('maxing_chongdong_targets', [])
+        chart_result.qi_ju_time = data.get('qi_ju_time', '')
+        chart_result.nian_ming = data.get('nian_ming', '')
+        chart_result.special_params = data.get('special_params', {})
+        
+        # 反序列化宫位数据
+        palaces_data = data.get('palaces', [])
+        chart_result.palaces = [Palace(i) for i in range(10)]  # 重新初始化
+        for palace_data in palaces_data:
+            if isinstance(palace_data, dict) and 'index' in palace_data:
+                index = palace_data['index']
+                if 0 <= index < 10:
+                    chart_result.palaces[index] = Palace.from_dict(palace_data)
+        
+        # 重建索引
+        chart_result.index = chart_result._build_index()
+        
+        return chart_result
 
 
 class Case:
     """案例数据模型 - 包含排盘结果和用户标注"""
     def __init__(self, title: str, chart_result: ChartResult):
+        self.id: Optional[int] = None  # 数据库ID，新案例为None，保存后被赋值
         self.title: str = title
         self.chart_result: ChartResult = chart_result
         # 标注数据存储 - 支持一个参数多个标注（保留用于向后兼容）

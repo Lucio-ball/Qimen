@@ -25,11 +25,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 
 from core.paipan_engine import PaiPanEngine
 from core.models import ChartResult, Case
+from core.data_manager import DataManager
 from ui.config import DisplayConfig
 from ui.widgets.query_widget import QueryWidget
 from ..widgets.central_widget import CentralWidget
 from ..widgets.attribute_panel_widget import AttributePanelWidget
 from ..widgets.annotation_panel_widget import AnnotationPanelWidget
+from ..widgets.case_browser_widget import CaseBrowserWidget
 from ui.widgets.chart_widget import ChartWidget
 from ui.widgets.welcome_widget import WelcomeWidget
 from ui.dialogs.query_dialog import QueryDialog
@@ -56,12 +58,16 @@ class IntegratedMainWindow(QMainWindow):
         self.global_data = self._load_global_data()
         self.current_config = DisplayConfig()
         
+        # 初始化数据管理器
+        self.data_manager = DataManager()
+        
         # 页面管理和案例计数
         self.central_widget = None
         self.case_counter = 0  # 案例计数器，用于生成标签页标题
         
         # 初始化UI组件
         self.attribute_panel_widget = None
+        self.case_browser_widget = None
         
         # 初始化界面
         self._init_ui()
@@ -76,6 +82,9 @@ class IntegratedMainWindow(QMainWindow):
         
         # 确保停靠面板初始状态正确（放在最后确保生效）
         self._setup_initial_dock_state()
+        
+        # 初始化案例列表
+        self._refresh_case_list()
         
     def _load_global_data(self) -> dict:
         """加载全局数据文件"""
@@ -134,8 +143,26 @@ class IntegratedMainWindow(QMainWindow):
         self.annotation_dock.setWidget(self.annotation_panel_widget)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.annotation_dock)
         
+        # 创建左侧案例浏览器面板
+        self.case_browser_dock = QDockWidget("案例浏览器", self)
+        self.case_browser_dock.setFeatures(
+            QDockWidget.DockWidgetFeature.DockWidgetMovable |
+            QDockWidget.DockWidgetFeature.DockWidgetFloatable |
+            QDockWidget.DockWidgetFeature.DockWidgetClosable
+        )
+        
+        # 设置允许停靠的区域
+        self.case_browser_dock.setAllowedAreas(
+            Qt.DockWidgetArea.LeftDockWidgetArea |
+            Qt.DockWidgetArea.RightDockWidgetArea
+        )
+        
+        self.case_browser_widget = CaseBrowserWidget(self)
+        self.case_browser_dock.setWidget(self.case_browser_widget)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.case_browser_dock)
+        
         # 设置停靠面板的默认大小
-        self.resizeDocks([self.attribute_dock, self.annotation_dock], [300, 250], Qt.Orientation.Horizontal)
+        self.resizeDocks([self.case_browser_dock, self.attribute_dock, self.annotation_dock], [250, 300, 250], Qt.Orientation.Horizontal)
         
         # 将标注面板停靠在属性面板下方
         self.tabifyDockWidget(self.attribute_dock, self.annotation_dock)
@@ -163,30 +190,24 @@ class IntegratedMainWindow(QMainWindow):
     def _setup_dock_actions(self):
         """设置停靠面板的菜单操作"""
         # 必须在_setup_menu()之后调用，以确保view_menu已经创建
-        if hasattr(self, 'view_menu') and hasattr(self, 'attribute_dock'):
-            # 获取属性面板的toggleViewAction
-            toggle_action = self.attribute_dock.toggleViewAction()
+        if hasattr(self, 'view_menu'):
+            # 添加案例浏览器的菜单操作
+            if hasattr(self, 'case_browser_dock'):
+                case_browser_toggle_action = self.case_browser_dock.toggleViewAction()
+                case_browser_toggle_action.setEnabled(True)
+                self.view_menu.addAction(case_browser_toggle_action)
             
-            # 确保action是启用的
-            toggle_action.setEnabled(True)
-            
-            # 添加到视图菜单
-            self.view_menu.addAction(toggle_action)
-            
-        # 添加标注面板的菜单操作
-        if hasattr(self, 'view_menu') and hasattr(self, 'annotation_dock'):
-            # 获取标注面板的toggleViewAction
-            annotation_toggle_action = self.annotation_dock.toggleViewAction()
-            
-            # 确保action是启用的
-            annotation_toggle_action.setEnabled(True)
-            
-            # 添加到视图菜单
-            self.view_menu.addAction(annotation_toggle_action)
-            toggle_action.setEnabled(True)
-            
-            # 添加到视图菜单
-            self.view_menu.addAction(toggle_action)
+            # 添加属性面板的菜单操作
+            if hasattr(self, 'attribute_dock'):
+                attribute_toggle_action = self.attribute_dock.toggleViewAction()
+                attribute_toggle_action.setEnabled(True)
+                self.view_menu.addAction(attribute_toggle_action)
+                
+            # 添加标注面板的菜单操作
+            if hasattr(self, 'annotation_dock'):
+                annotation_toggle_action = self.annotation_dock.toggleViewAction()
+                annotation_toggle_action.setEnabled(True)
+                self.view_menu.addAction(annotation_toggle_action)
         
     def _setup_menu(self):
         """创建和设置主窗口的菜单栏"""
@@ -200,6 +221,20 @@ class IntegratedMainWindow(QMainWindow):
         self.new_case_action = QAction("新建案例(&N)", self)
         self.new_case_action.setShortcut("Ctrl+N")
         file_menu.addAction(self.new_case_action)
+        
+        file_menu.addSeparator()
+        
+        # 保存当前案例
+        self.save_case_action = QAction("保存当前案例(&S)", self)
+        self.save_case_action.setShortcut("Ctrl+S")
+        self.save_case_action.triggered.connect(self._save_current_case)
+        file_menu.addAction(self.save_case_action)
+        
+        # 另存为
+        self.save_as_action = QAction("另存为(&A)...", self)
+        self.save_as_action.setShortcut("Ctrl+Shift+S")
+        self.save_as_action.triggered.connect(self._save_case_as)
+        file_menu.addAction(self.save_as_action)
         
         file_menu.addSeparator()
         
@@ -248,6 +283,12 @@ class IntegratedMainWindow(QMainWindow):
             # 连接标签页切换信号
             if self.central_widget.tab_widget:
                 self.central_widget.tab_widget.currentChanged.connect(self._handle_tab_changed)
+                
+        # 案例浏览器信号连接
+        if self.case_browser_widget:
+            self.case_browser_widget.case_double_clicked.connect(self._load_case)
+            self.case_browser_widget.delete_case_requested.connect(self._delete_case)
+            self.case_browser_widget.refresh_button.clicked.connect(self._refresh_case_list)
         
         # 属性面板信号连接
         if self.attribute_panel_widget:
@@ -452,23 +493,6 @@ class IntegratedMainWindow(QMainWindow):
         """获取标签页数量"""
         return self.central_widget.get_tab_count() if self.central_widget else 0
         
-    def _handle_tab_changed(self, index):
-        """处理标签页切换"""
-        if index >= 0 and self.central_widget:
-            # 获取当前标签页的widget
-            current_widget = self.central_widget.get_current_tab_widget()
-            if current_widget and hasattr(current_widget, 'case'):
-                # 更新标注面板显示当前案例的标注
-                if self.annotation_panel_widget:
-                    self.annotation_panel_widget.set_case(current_widget.case)
-                    
-                # 如果需要，可以连接ParameterWidget的标注信号
-                self._connect_parameter_widget_signals(current_widget)
-            else:
-                # 清空标注面板
-                if self.annotation_panel_widget:
-                    self.annotation_panel_widget.set_case(None)
-                    
     def _connect_parameter_widget_signals(self, chart_widget):
         """连接ChartWidget中的ParameterWidget信号"""
         # 这里需要根据ChartWidget的实际结构来实现
@@ -709,6 +733,165 @@ class IntegratedMainWindow(QMainWindow):
         # 可以继续添加其他参数类型的处理...
                     
         return matching_ids
+
+    # ============ 案例持久化相关方法 ============
+    
+    def _save_current_case(self):
+        """保存当前案例"""
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if not current_widget or not hasattr(current_widget, 'case'):
+            QMessageBox.warning(self, "警告", "没有可保存的案例")
+            return
+            
+        try:
+            case = current_widget.case
+            case_id = self.data_manager.save_case(case)
+            
+            # 更新标签页标题（如果是新保存的案例）
+            if case.id == case_id:
+                current_index = self.central_widget.tab_widget.currentIndex()
+                self.central_widget.tab_widget.setTabText(current_index, case.title)
+            
+            # 刷新案例列表
+            self._refresh_case_list()
+            
+            # 状态栏提示
+            self.status_bar.showMessage(f"案例 '{case.title}' 已保存", 3000)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"保存案例失败：{str(e)}")
+            
+    def _save_case_as(self):
+        """另存为案例"""
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if not current_widget or not hasattr(current_widget, 'case'):
+            QMessageBox.warning(self, "警告", "没有可保存的案例")
+            return
+            
+        # 这里可以弹出对话框让用户输入新的案例名称
+        # 为简化实现，这里直接在原案例名称后加上时间戳
+        import datetime
+        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        try:
+            case = current_widget.case
+            original_id = case.id
+            original_title = case.title
+            
+            # 创建新的案例（清空ID和修改标题）
+            case.id = None
+            case.title = f"{original_title}_副本_{current_time}"
+            
+            case_id = self.data_manager.save_case(case)
+            
+            # 更新当前标签页标题
+            current_index = self.central_widget.tab_widget.currentIndex()
+            self.central_widget.tab_widget.setTabText(current_index, case.title)
+            
+            # 刷新案例列表
+            self._refresh_case_list()
+            
+            # 状态栏提示
+            self.status_bar.showMessage(f"案例已另存为 '{case.title}'", 3000)
+            
+        except Exception as e:
+            # 恢复原始状态
+            case.id = original_id
+            case.title = original_title
+            QMessageBox.critical(self, "错误", f"另存为失败：{str(e)}")
+            
+    def _load_case(self, case_id: int):
+        """加载案例到新标签页"""
+        try:
+            case = self.data_manager.load_case(case_id)
+            if not case:
+                QMessageBox.warning(self, "警告", "案例不存在或已被删除")
+                self._refresh_case_list()  # 刷新列表以移除无效项
+                return
+                
+            # 在新标签页中打开案例
+            self._create_case_tab(case)
+            
+            # 状态栏提示
+            self.status_bar.showMessage(f"案例 '{case.title}' 已加载", 3000)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"加载案例失败：{str(e)}")
+            
+    def _delete_case(self, case_id: int):
+        """删除案例"""
+        try:
+            success = self.data_manager.delete_case(case_id)
+            if success:
+                # 从案例浏览器列表中移除
+                self.case_browser_widget.remove_case_from_list(case_id)
+                
+                # 检查是否有已打开的标签页对应这个案例，如果有则关闭
+                self._close_case_tab_by_id(case_id)
+                
+                # 状态栏提示
+                self.status_bar.showMessage("案例已删除", 3000)
+            else:
+                QMessageBox.warning(self, "警告", "删除案例失败，案例可能不存在")
+                
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"删除案例失败：{str(e)}")
+            
+    def _refresh_case_list(self):
+        """刷新案例列表"""
+        try:
+            cases_summary = self.data_manager.get_all_cases_summary()
+            self.case_browser_widget.refresh_list(cases_summary)
+        except Exception as e:
+            print(f"刷新案例列表失败：{e}")
+            self.case_browser_widget.set_status("刷新失败")
+            
+    def _create_case_tab(self, case: Case):
+        """创建案例标签页"""
+        # 创建ChartWidget并设置案例
+        chart_widget = ChartWidget(self.current_config, case.chart_result, case, self.global_data)
+        
+        # 连接参数组件信号
+        self._connect_parameter_widget_signals(chart_widget)
+        
+        # 添加到标签页
+        tab_index = self.central_widget.add_tab(chart_widget, case.title)
+        
+        # 切换到新标签页
+        self.central_widget.tab_widget.setCurrentIndex(tab_index)
+        
+        # 更新标注面板
+        if self.annotation_panel_widget:
+            self.annotation_panel_widget.set_case(case)
+            
+    def _close_case_tab_by_id(self, case_id: int):
+        """根据案例ID关闭对应的标签页"""
+        if not self.central_widget or not self.central_widget.tab_widget:
+            return
+            
+        tab_widget = self.central_widget.tab_widget
+        for i in range(tab_widget.count()):
+            widget = tab_widget.widget(i)
+            if hasattr(widget, 'case') and widget.case and widget.case.id == case_id:
+                tab_widget.removeTab(i)
+                break
+                
+    def _handle_tab_changed(self, index: int):
+        """处理标签页切换事件"""
+        if index >= 0 and self.central_widget and self.central_widget.tab_widget:
+            current_widget = self.central_widget.tab_widget.widget(index)
+            
+            # 更新保存菜单的可用性
+            has_case = hasattr(current_widget, 'case') and current_widget.case is not None
+            if hasattr(self, 'save_case_action'):
+                self.save_case_action.setEnabled(has_case)
+            if hasattr(self, 'save_as_action'):
+                self.save_as_action.setEnabled(has_case)
+                
+            # 更新标注面板
+            if self.annotation_panel_widget:
+                case = getattr(current_widget, 'case', None) if current_widget else None
+                self.annotation_panel_widget.set_case(case)
 
 
 def main():

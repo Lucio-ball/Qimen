@@ -34,28 +34,23 @@
     },
     {
       "param_type": "tianGan",
-      "label": "乙奇(女性)",
+      "label": "女方",
       "param_value": "乙"
     },
     {
       "param_type": "tianGan",
-      "label": "庚金(男性)",
+      "label": "男方",
       "param_value": "庚"
     },
     {
-      "param_type": "jiuXing",
-      "label": "天芮(妻妾)",
-      "param_value": "天芮"
+      "param_type": "tianGan",
+      "label": "男情人",
+      "param_value": "丙"
     },
     {
-      "param_type": "jiuXing",
-      "label": "天禽(媒人)",
-      "param_value": "天禽"
-    },
-    {
-      "param_type": "baMen",
-      "label": "休门(婚姻)",
-      "param_value": "休门"
+      "param_type": "tianGan",
+      "label": "女情人",
+      "param_value": "丁"
     }
   ],
   "工作晋升": [
@@ -93,33 +88,23 @@
   "测病健康": [
     {
       "param_type": "jiuXing",
-      "param_value": "心",
-      "label": "天心(医生)"
+      "label": "西医",
+      "param_value": "天心"
     },
     {
       "param_type": "jiuXing",
-      "param_value": "芮",
-      "label": "天芮(疾病)"
-    },
-    {
-      "param_type": "riGan",
-      "param_value": null,
-      "label": "日干(病人)"
+      "label": "疾病",
+      "param_value": "天芮"
     },
     {
       "param_type": "baMen",
-      "param_value": "杜",
-      "label": "杜门(阻滞)"
+      "label": "修养",
+      "param_value": "休"
     },
     {
-      "param_type": "baMen",
-      "param_value": "休",
-      "label": "休门(休养)"
-    },
-    {
-      "param_type": "zhiShi",
-      "param_value": null,
-      "label": "值使(治疗)"
+      "param_type": "tianGan",
+      "label": "中医",
+      "param_value": "乙"
     }
   ],
   "财运投资": [
