@@ -48,11 +48,11 @@ class DisplayConfig:
             
         # 简化的颜色映射（在实际应用中应该从data/core_parameters.json读取）
         wuxing_colors = {
-            "木": QColor(0, 180, 0),      # 深绿色
-            "火": QColor(255, 0, 0),      # 红色  
-            "土": QColor(139, 69, 19),    # 棕色
-            "金": QColor(255, 215, 0),    # 金黄色
-            "水": QColor(0, 0, 255),      # 蓝色
+            "木": QColor(0x39, 0xa7, 0x5a),      # 绿色 #39a75a
+            "火": QColor(0xe6, 0x4a, 0x35),      # 红色 #e64a35
+            "土": QColor(0xc7, 0x7f, 0x37),      # 土黄色 #c77f37
+            "金": QColor(0xf5, 0xaa, 0x11),      # 金黄色 #f5aa11
+            "水": QColor(0x43, 0x7e, 0xe4),      # 蓝色 #437ee4
         }
         
         # 简化的映射逻辑（在实际应用中应该查询data/core_parameters.json）

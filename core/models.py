@@ -252,6 +252,11 @@ class Case:
         self.id: Optional[int] = None  # 数据库ID，新案例为None，保存后被赋值
         self.title: str = title
         self.chart_result: ChartResult = chart_result
+        
+        # V2新增字段
+        self.querent: str = ""  # 问测人
+        self.details: str = ""  # 事由详情
+        self.filepath: Optional[str] = None  # 案例文件路径(.qmw文件)
         # 标注数据存储 - 支持一个参数多个标注（保留用于向后兼容）
         # 键: 唯一的参数ID (e.g., "palace_7_heaven_stem_0")
         # 值: 标注对象的列表 (e.g., [{"text": "用神", "shape": "circle", "color": "#FF0000"}, {"text": "丈夫", "shape": "square", "color": "#00FF00"}])

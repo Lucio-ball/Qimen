@@ -11,11 +11,13 @@ Task ID: ARCH-20250901-012
 
 import sys
 import os
+import json
+from datetime import datetime
 from typing import Optional
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
     QMenuBar, QStatusBar, QMessageBox, QSplitter, QTabWidget, QTabBar, QMenu,
-    QApplication
+    QApplication, QFileDialog, QDialog
 )
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QIcon, QAction
@@ -26,8 +28,12 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
 from core.paipan_engine import PaiPanEngine
 from core.models import ChartResult, Case
 from core.data_manager import DataManager
+from core.workspace_manager import WorkspaceManager
+from core.config_manager import ConfigManager
 from ui.config import DisplayConfig
 from ui.widgets.query_widget import QueryWidget
+from ui.dialogs.case_info_dialog import CaseInfoDialog
+from ui.dialogs.preferences_dialog import PreferencesDialog
 from ..widgets.central_widget import CentralWidget
 from ..widgets.attribute_panel_widget import AttributePanelWidget
 from ..widgets.annotation_panel_widget import AnnotationPanelWidget
@@ -56,10 +62,19 @@ class IntegratedMainWindow(QMainWindow):
         # 初始化核心组件
         self.engine = PaiPanEngine()
         self.global_data = self._load_global_data()
-        self.current_config = DisplayConfig()
         
-        # 初始化数据管理器
-        self.data_manager = DataManager()
+        # 配置管理器
+        self.config_manager = ConfigManager()
+        self.current_config = self.config_manager.load_display_config()
+        self.general_config = self.config_manager.load_general_config()
+        self.data_config = self.config_manager.load_data_config()
+        
+        # V3架构：工作区管理器
+        self.workspace_manager = WorkspaceManager()
+        
+        # 初始化数据管理器 - V3版本：根据工作区动态设置
+        default_db_path = "qimen_cases.db"  # 兼容性默认数据库文件
+        self.data_manager = DataManager(db_path=default_db_path)
         
         # 页面管理和案例计数
         self.central_widget = None
@@ -83,8 +98,14 @@ class IntegratedMainWindow(QMainWindow):
         # 确保停靠面板初始状态正确（放在最后确保生效）
         self._setup_initial_dock_state()
         
+        # V3工作区自动加载
+        self._load_last_workspace()
+        
         # 初始化案例列表
         self._refresh_case_list()
+        
+        # 应用初始配置
+        self._apply_config(self.current_config)
         
     def _load_global_data(self) -> dict:
         """加载全局数据文件"""
@@ -217,23 +238,42 @@ class IntegratedMainWindow(QMainWindow):
         # 创建文件菜单
         file_menu = menubar.addMenu("文件(&F)")
         
-        # 新建案例菜单项
-        self.new_case_action = QAction("新建案例(&N)", self)
+        # V3工作区操作
+        # 打开工作区
+        self.open_workspace_action = QAction("打开工作区(&W)...", self)
+        self.open_workspace_action.setShortcut("Ctrl+Shift+O")
+        self.open_workspace_action.triggered.connect(self._on_open_workspace)
+        file_menu.addAction(self.open_workspace_action)
+        
+        file_menu.addSeparator()
+        
+        # 新建案例菜单项（保存至当前工作区）
+        self.new_case_action = QAction("新建案例(&N)...", self)
         self.new_case_action.setShortcut("Ctrl+N")
+        self.new_case_action.triggered.connect(self._on_new_case)
         file_menu.addAction(self.new_case_action)
+        
+        file_menu.addSeparator()
+        
+        # V2文件操作（保留兼容性）
+        # 打开案例文件
+        self.open_case_action = QAction("打开案例文件(&O)...", self)
+        self.open_case_action.setShortcut("Ctrl+O")
+        self.open_case_action.triggered.connect(self._on_open_case_file)
+        file_menu.addAction(self.open_case_action)
         
         file_menu.addSeparator()
         
         # 保存当前案例
         self.save_case_action = QAction("保存当前案例(&S)", self)
         self.save_case_action.setShortcut("Ctrl+S")
-        self.save_case_action.triggered.connect(self._save_current_case)
+        self.save_case_action.triggered.connect(self._on_save_case)
         file_menu.addAction(self.save_case_action)
         
-        # 另存为
-        self.save_as_action = QAction("另存为(&A)...", self)
+        # 当前案例另存为
+        self.save_as_action = QAction("当前案例另存为(&A)...", self)
         self.save_as_action.setShortcut("Ctrl+Shift+S")
-        self.save_as_action.triggered.connect(self._save_case_as)
+        self.save_as_action.triggered.connect(self._on_save_case_as)
         file_menu.addAction(self.save_as_action)
         
         file_menu.addSeparator()
@@ -251,6 +291,15 @@ class IntegratedMainWindow(QMainWindow):
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
+        
+        # 创建编辑菜单
+        edit_menu = menubar.addMenu("编辑(&E)")
+        
+        # 首选项菜单项
+        preferences_action = QAction("首选项(&P)...", self)
+        preferences_action.setShortcut("Ctrl+,")
+        preferences_action.triggered.connect(self._show_preferences)
+        edit_menu.addAction(preferences_action)
         
         # 创建视图菜单 - 用于控制停靠面板显示
         self.view_menu = menubar.addMenu("视图(&V)")
@@ -271,9 +320,8 @@ class IntegratedMainWindow(QMainWindow):
         
     def _connect_signals(self):
         """连接信号与槽"""
-        # 菜单操作信号连接
-        if hasattr(self, 'new_case_action'):
-            self.new_case_action.triggered.connect(self._handle_new_case_action)
+        # V3工作区相关信号连接
+        # （菜单操作信号在菜单设置时已连接）
         
         # 中央切换控件信号连接
         if self.central_widget:
@@ -284,11 +332,18 @@ class IntegratedMainWindow(QMainWindow):
             if self.central_widget.tab_widget:
                 self.central_widget.tab_widget.currentChanged.connect(self._handle_tab_changed)
                 
-        # 案例浏览器信号连接
+        # V3案例浏览器信号连接（工作区模式）
         if self.case_browser_widget:
-            self.case_browser_widget.case_double_clicked.connect(self._load_case)
-            self.case_browser_widget.delete_case_requested.connect(self._delete_case)
-            self.case_browser_widget.refresh_button.clicked.connect(self._refresh_case_list)
+            # V3新信号
+            self.case_browser_widget.case_file_selected.connect(self._on_case_file_selected)
+            self.case_browser_widget.open_workspace_requested.connect(self._on_open_workspace)
+            self.case_browser_widget.new_case_requested.connect(self._on_new_case_in_workspace)
+            
+            # 保留兼容性信号
+            if hasattr(self.case_browser_widget, 'case_double_clicked'):
+                self.case_browser_widget.case_double_clicked.connect(self._load_case)
+            if hasattr(self.case_browser_widget, 'delete_case_requested'):
+                self.case_browser_widget.delete_case_requested.connect(self._delete_case)
         
         # 属性面板信号连接
         if self.attribute_panel_widget:
@@ -365,16 +420,16 @@ class IntegratedMainWindow(QMainWindow):
                 # 重新计算特殊参数，因为年命会影响特殊参数的计算
                 chart_result.special_params = self.engine._analyze_special_params(chart_result)
             
-            # 生成案例标题
+            # 生成案例标题（保持简洁格式）
             self.case_counter += 1
             case_title = f"案例{self.case_counter}"
             
-            # 可以根据起局信息生成更具描述性的标题
-            if 'question' in query_data and query_data['question']:
-                case_title = f"案例{self.case_counter}: {query_data['question'][:10]}..."
-            
             # 创建Case数据模型
             case = Case(case_title, chart_result)
+            
+            # 设置案例的事由详情
+            if 'notes' in query_data:
+                case.details = query_data['notes']
             
             # 创建新的图表组件
             chart_widget = ChartWidget(self.global_data, self.current_config)
@@ -734,71 +789,306 @@ class IntegratedMainWindow(QMainWindow):
                     
         return matching_ids
 
+    # ============ V3工作区管理相关方法 ============
+    
+    def _load_last_workspace(self):
+        """加载上次的工作区"""
+        if self.workspace_manager.has_workspace():
+            workspace_path = self.workspace_manager.get_workspace_path()
+            self.case_browser_widget.load_workspace(workspace_path)
+            self.status_bar.showMessage(f"已加载工作区: {workspace_path}", 3000)
+        else:
+            self.status_bar.showMessage("请打开一个工作区开始使用", 5000)
+            
+    def _on_open_workspace(self):
+        """打开工作区文件夹"""
+        workspace_path = QFileDialog.getExistingDirectory(
+            self,
+            "选择工作区文件夹",
+            self.workspace_manager.get_workspace_path() or ""
+        )
+        
+        if not workspace_path:
+            return
+            
+        # 验证工作区
+        is_valid, error_msg = self.workspace_manager.validate_workspace(workspace_path)
+        if not is_valid:
+            QMessageBox.warning(self, "工作区无效", error_msg)
+            return
+            
+        # 设置工作区
+        if self.workspace_manager.set_workspace_path(workspace_path):
+            # 加载工作区到案例浏览器
+            self.case_browser_widget.load_workspace(workspace_path)
+            
+            # 更新状态
+            self.status_bar.showMessage(f"工作区已切换到: {workspace_path}", 3000)
+            
+            # 刷新案例列表（兼容性）
+            self._refresh_case_list()
+        else:
+            QMessageBox.critical(self, "错误", "设置工作区失败")
+            
+    def _on_new_case(self):
+        """新建案例（保存至当前工作区）"""
+        # 检查是否有工作区
+        if not self.workspace_manager.has_workspace():
+            reply = QMessageBox.question(
+                self,
+                "需要工作区",
+                "新建案例需要先打开一个工作区。是否现在选择工作区？",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+            if reply == QMessageBox.Yes:
+                self._on_open_workspace()
+                if not self.workspace_manager.has_workspace():
+                    return
+            else:
+                return
+                
+        # 弹出起局对话框
+        from ui.dialogs.query_dialog import QueryDialog
+        query_dialog = QueryDialog(self)
+        
+        if query_dialog.exec() == QDialog.Accepted:
+            query_data = query_dialog.get_query_data()
+            
+            try:
+                # 生成排盘结果
+                chart_result = self.engine.calculate_chart(query_data)
+                
+                # 创建案例
+                case = Case(title="新案例", chart_result=chart_result)
+                
+                # 弹出文件保存对话框，默认路径为当前工作区
+                workspace_path = self.workspace_manager.get_workspace_path()
+                default_filename = f"案例_{datetime.now().strftime('%Y%m%d_%H%M%S')}.qmw"
+                default_path = os.path.join(workspace_path, default_filename)
+                
+                filepath, _ = QFileDialog.getSaveFileName(
+                    self,
+                    "保存新案例",
+                    default_path,
+                    "奇门遁甲案例文件 (*.qmw);;所有文件 (*)"
+                )
+                
+                if filepath:
+                    # 确保文件扩展名
+                    if not filepath.lower().endswith('.qmw'):
+                        filepath += '.qmw'
+                        
+                    # 设置案例信息
+                    case.title = os.path.splitext(os.path.basename(filepath))[0]
+                    case.filepath = filepath
+                    
+                    # 保存案例
+                    file_data_manager = DataManager(db_path=filepath)
+                    file_data_manager.save_case(case)
+                    
+                    # 在新标签页中打开
+                    self._create_case_tab(case)
+                    
+                    # 刷新案例浏览器
+                    self.case_browser_widget.load_workspace(workspace_path)
+                    
+                    # 状态提示
+                    self.status_bar.showMessage(f"新案例已保存: {case.title}", 3000)
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"创建案例失败: {str(e)}")
+    
+    def _on_new_case_in_workspace(self, workspace_path: str):
+        """在指定工作区中新建案例"""
+        # 弹出起局对话框
+        from ui.dialogs.query_dialog import QueryDialog
+        query_dialog = QueryDialog(self)
+        
+        if query_dialog.exec() == QDialog.Accepted:
+            query_data = query_dialog.get_query_data()
+            
+            try:
+                # 生成排盘结果
+                chart_result = self.engine.calculate_chart(query_data)
+                
+                # 创建案例
+                case = Case(title="新案例", chart_result=chart_result)
+                
+                # 使用案例信息对话框获取详细信息并保存
+                workspace_path = None
+                if self.workspace_manager and self.workspace_manager.current_workspace:
+                    workspace_path = self.workspace_manager.current_workspace
+                
+                from ui.dialogs.case_info_dialog import CaseInfoDialog
+                dialog = CaseInfoDialog(self, mode="save_as", default_directory=workspace_path)
+                dialog.set_case_info("新案例", "", "")
+                
+                if dialog.exec() == QDialog.Accepted:
+                    case_info = dialog.get_case_info()
+                    save_path = dialog.get_save_path()
+                    
+                    # 设置案例信息
+                    case.title = case_info['name']
+                    case.client_name = case_info['client']
+                    case.description = case_info['description']
+                    case.filepath = save_path
+                    
+                    # 保存案例
+                    file_data_manager = DataManager(db_path=save_path)
+                    file_data_manager.save_case(case)
+                    
+                    # 在新标签页中打开
+                    self._create_case_tab(case)
+                    
+                    # 刷新案例浏览器（如果保存到当前工作区）
+                    if self.workspace_manager and save_path.startswith(self.workspace_manager.current_workspace):
+                        self.workspace_manager.refresh_workspace()
+                    
+                    # 状态提示
+                    self.status_bar.showMessage(f"新案例已保存: {case.title}", 3000)
+                    
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"创建案例失败: {str(e)}")
+                
+    def _on_case_file_selected(self, file_path: str):
+        """处理案例文件选择（V3版本）"""
+        try:
+            # 使用文件路径的DataManager加载案例
+            file_data_manager = DataManager(db_path=file_path)
+            cases = file_data_manager.load_all_cases()
+            
+            if not cases:
+                QMessageBox.warning(self, "警告", "该文件中没有案例数据")
+                return
+                
+            # 如果有多个案例，选择第一个（后续可以改进为让用户选择）
+            case = cases[0]
+            case.filepath = file_path  # 关联文件路径
+            
+            # 在新标签页中打开
+            self._create_case_tab(case)
+            
+            # 状态提示
+            self.status_bar.showMessage(f"已打开案例: {case.title}", 3000)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"打开案例文件失败: {str(e)}")
+
     # ============ 案例持久化相关方法 ============
     
-    def _save_current_case(self):
-        """保存当前案例"""
+    def _on_open_case_file(self):
+        """打开案例文件"""
+        filepath, _ = QFileDialog.getOpenFileName(
+            self,
+            "打开案例文件",
+            "",
+            "奇门遁甲案例文件 (*.qmw);;所有文件 (*)"
+        )
+        
+        if not filepath:
+            return
+            
+        try:
+            # 使用指定文件路径的DataManager加载案例
+            file_data_manager = DataManager(db_path=filepath)
+            cases = file_data_manager.load_all_cases()
+            
+            if not cases:
+                QMessageBox.information(self, "信息", "该文件中没有找到案例数据")
+                return
+                
+            # 如果只有一个案例，直接打开
+            if len(cases) == 1:
+                case = cases[0]
+                case.filepath = filepath  # 关联文件路径
+                self._create_case_tab(case)
+                self.status_bar.showMessage(f"已打开案例: {case.title}", 3000)
+            else:
+                # 多个案例，让用户选择（这里简化为打开第一个）
+                case = cases[0]
+                case.filepath = filepath
+                self._create_case_tab(case)
+                self.status_bar.showMessage(f"已打开案例: {case.title} （文件中共有{len(cases)}个案例）", 3000)
+                
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"打开案例文件失败：{str(e)}")
+    
+    def _on_save_case(self):
+        """保存当前案例（V2版本）"""
         current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
         if not current_widget or not hasattr(current_widget, 'case'):
             QMessageBox.warning(self, "警告", "没有可保存的案例")
             return
             
-        try:
-            case = current_widget.case
-            case_id = self.data_manager.save_case(case)
+        case = current_widget.case
+        
+        # 如果案例已经有关联的文件路径，直接保存
+        if case.filepath:
+            try:
+                file_data_manager = DataManager(db_path=case.filepath)
+                file_data_manager.save_case(case)
+                self.status_bar.showMessage(f"案例 '{case.title}' 已保存到 {case.filepath}", 3000)
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"保存案例失败：{str(e)}")
+        else:
+            # 没有关联文件路径，调用另存为
+            self._on_save_case_as()
             
-            # 更新标签页标题（如果是新保存的案例）
-            if case.id == case_id:
+    def _on_save_case_as(self):
+        """当前案例另存为（V3版本升级）"""
+        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
+        if not current_widget or not hasattr(current_widget, 'case'):
+            QMessageBox.warning(self, "警告", "没有可保存的案例")
+            return
+            
+        case = current_widget.case
+        
+        # V3升级：获取当前工作区路径作为默认目录
+        default_directory = None
+        if self.workspace_manager.has_workspace():
+            default_directory = self.workspace_manager.get_workspace_path()
+        
+        # 创建案例信息对话框，传递默认目录
+        dialog = CaseInfoDialog(self, mode="save_as", default_directory=default_directory)
+        dialog.set_case_info(case.title, case.querent, case.details)
+        
+        if dialog.exec() == QDialog.Accepted:
+            case_info = dialog.get_case_info()
+            
+            try:
+                # 更新案例信息
+                case.title = case_info['name']
+                case.querent = case_info['querent']
+                case.details = case_info['details']
+                case.filepath = case_info['filepath']
+                
+                # 保存到指定文件
+                file_data_manager = DataManager(db_path=case.filepath)
+                file_data_manager.save_case(case)
+                
+                # 更新标签页标题
                 current_index = self.central_widget.tab_widget.currentIndex()
                 self.central_widget.tab_widget.setTabText(current_index, case.title)
-            
-            # 刷新案例列表
-            self._refresh_case_list()
-            
-            # 状态栏提示
-            self.status_bar.showMessage(f"案例 '{case.title}' 已保存", 3000)
-            
-        except Exception as e:
-            QMessageBox.critical(self, "错误", f"保存案例失败：{str(e)}")
-            
-    def _save_case_as(self):
-        """另存为案例"""
-        current_widget = self.central_widget.get_current_tab_widget() if self.central_widget else None
-        if not current_widget or not hasattr(current_widget, 'case'):
-            QMessageBox.warning(self, "警告", "没有可保存的案例")
-            return
-            
-        # 这里可以弹出对话框让用户输入新的案例名称
-        # 为简化实现，这里直接在原案例名称后加上时间戳
-        import datetime
-        current_time = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                
+                # V3升级：如果保存到当前工作区，刷新案例浏览器
+                if (self.workspace_manager.has_workspace() and 
+                    case.filepath.startswith(self.workspace_manager.get_workspace_path())):
+                    self.case_browser_widget.load_workspace(self.workspace_manager.get_workspace_path())
+                
+                # 状态栏提示
+                self.status_bar.showMessage(f"案例已保存为 '{case.title}' 到 {case.filepath}", 3000)
+                
+            except Exception as e:
+                QMessageBox.critical(self, "错误", f"保存案例失败：{str(e)}")
+    
+    def _save_current_case(self):
+        """保存当前案例（保留兼容性，调用V2方法）"""
+        self._on_save_case()
         
-        try:
-            case = current_widget.case
-            original_id = case.id
-            original_title = case.title
-            
-            # 创建新的案例（清空ID和修改标题）
-            case.id = None
-            case.title = f"{original_title}_副本_{current_time}"
-            
-            case_id = self.data_manager.save_case(case)
-            
-            # 更新当前标签页标题
-            current_index = self.central_widget.tab_widget.currentIndex()
-            self.central_widget.tab_widget.setTabText(current_index, case.title)
-            
-            # 刷新案例列表
-            self._refresh_case_list()
-            
-            # 状态栏提示
-            self.status_bar.showMessage(f"案例已另存为 '{case.title}'", 3000)
-            
-        except Exception as e:
-            # 恢复原始状态
-            case.id = original_id
-            case.title = original_title
-            QMessageBox.critical(self, "错误", f"另存为失败：{str(e)}")
+    def _save_case_as(self):
+        """另存为案例（保留兼容性，调用V2方法）"""
+        self._on_save_case_as()
             
     def _load_case(self, case_id: int):
         """加载案例到新标签页"""
@@ -901,6 +1191,122 @@ class IntegratedMainWindow(QMainWindow):
             if self.annotation_panel_widget:
                 case = getattr(current_widget, 'case', None) if current_widget else None
                 self.annotation_panel_widget.set_case(case)
+    
+    def _show_preferences(self):
+        """显示首选项对话框"""
+        try:
+            dialog = PreferencesDialog(self.config_manager, self)
+            
+            # 连接实时预览信号
+            dialog.config_applied.connect(self._apply_all_configs)
+            
+            if dialog.exec() == QDialog.Accepted:
+                # 用户点击确定，配置已在对话框中保存
+                self.current_config = self.config_manager.load_display_config()
+                self.general_config = self.config_manager.load_general_config()
+                self.data_config = self.config_manager.load_data_config()
+                print("首选项设置已保存")
+            else:
+                # 用户点击取消，恢复原始配置
+                self.current_config = self.config_manager.load_display_config()
+                self.general_config = self.config_manager.load_general_config()
+                self.data_config = self.config_manager.load_data_config()
+                self._apply_config(self.current_config)
+                print("首选项设置已取消")
+                
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "错误",
+                f"无法打开首选项对话框：{str(e)}"
+            )
+    
+    def _apply_all_configs(self, display_config: DisplayConfig, general_config: dict, data_config: dict):
+        """应用所有配置到相关组件"""
+        try:
+            # 更新当前配置
+            self.current_config = display_config
+            self.general_config = general_config
+            self.data_config = data_config
+            
+            # 应用显示配置
+            self._apply_config(display_config)
+            
+            # 应用通用配置（主题、语言等）
+            self._apply_general_config(general_config)
+            
+            # 应用数据配置（工作区路径等）
+            self._apply_data_config(data_config)
+            
+            print(f"所有配置已应用")
+            
+        except Exception as e:
+            print(f"应用配置时出错: {e}")
+    
+    def _apply_general_config(self, config: dict):
+        """应用通用配置"""
+        try:
+            # 主题切换
+            theme = config.get("theme", "light")
+            if theme == "dark":
+                # 未来可以实现暗色主题
+                print("暗色主题功能待实现")
+            elif theme == "light":
+                # 应用亮色主题
+                print("应用亮色主题")
+            
+            # 语言切换
+            language = config.get("language", "zh_CN")
+            if language != "zh_CN":
+                print("多语言功能待实现")
+            
+            # 自动加载工作区设置
+            auto_load = config.get("auto_load_last_workspace", True)
+            if hasattr(self, 'workspace_manager'):
+                self.workspace_manager.auto_load_enabled = auto_load
+                
+        except Exception as e:
+            print(f"应用通用配置时出错: {e}")
+    
+    def _apply_data_config(self, config: dict):
+        """应用数据配置"""
+        try:
+            # 默认工作区路径
+            default_path = config.get("default_workspace_path", "")
+            if hasattr(self, 'workspace_manager') and default_path:
+                self.workspace_manager.default_workspace_path = default_path
+            
+            # 其他数据配置可以在这里扩展
+            print(f"数据配置已应用: 默认工作区={default_path}")
+            
+        except Exception as e:
+            print(f"应用数据配置时出错: {e}")
+    
+    def _apply_config(self, config: DisplayConfig):
+        """应用配置到所有相关组件"""
+        try:
+            # 更新当前配置
+            self.current_config = config
+            
+            # 应用到所有打开的图表部件
+            if self.central_widget and self.central_widget.tab_widget:
+                tab_widget = self.central_widget.tab_widget
+                for i in range(tab_widget.count()):
+                    widget = tab_widget.widget(i)
+                    if isinstance(widget, ChartWidget):
+                        widget.update_config(config)
+            
+            # 应用到属性面板
+            if self.attribute_panel_widget and hasattr(self.attribute_panel_widget, 'update_config'):
+                self.attribute_panel_widget.update_config(config)
+            
+            # 应用到其他可能需要配置的组件
+            # （根据需要扩展）
+            
+            print(f"配置已应用: 五行颜色={config.use_wuxing_colors}, 值符时粗体={config.show_zhi_fu_shi_bold}")
+            
+        except Exception as e:
+            print(f"应用配置时出错: {e}")
 
 
 def main():
