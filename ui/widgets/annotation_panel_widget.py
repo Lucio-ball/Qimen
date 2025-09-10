@@ -12,6 +12,17 @@ from typing import Dict, List, Optional
 from ..dialogs.annotation_dialog import AnnotationDialog
 import json
 import os
+import sys
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的应用程序
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base_path, relative_path)
 
 
 class AnnotationListItem(QListWidgetItem):
@@ -210,9 +221,8 @@ class AnnotationPanelWidget(QWidget):
     def _load_templates(self):
         """加载模板数据"""
         try:
-            # 假设templates.json在项目根目录的data文件夹下
-            template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                       "data", "templates.json")
+            # 使用资源路径函数获取正确的模板文件路径
+            template_path = get_resource_path("data/templates.json")
             if os.path.exists(template_path):
                 with open(template_path, 'r', encoding='utf-8') as f:
                     self.templates = json.load(f)

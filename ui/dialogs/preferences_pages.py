@@ -6,7 +6,18 @@ Task ID: FEAT-20250901-020-Comprehensive (全面首选项系统)
 
 import os
 import json
+import sys
 from typing import Dict, Any, List, Optional
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的应用程序
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base_path, relative_path)
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QComboBox,
     QCheckBox, QLineEdit, QPushButton, QFileDialog, QMessageBox, QListWidget,
@@ -270,9 +281,7 @@ class TemplateManagementPage(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.templates_file = os.path.join(
-            os.path.dirname(__file__), '..', '..', 'data', 'templates.json'
-        )
+        self.templates_file = get_resource_path('data/templates.json')
         self.templates_data = {}
         self.current_template = None
         self._init_ui()

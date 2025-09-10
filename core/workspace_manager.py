@@ -11,7 +11,6 @@ import json
 from typing import Optional
 from PySide6.QtCore import QSettings
 
-
 class WorkspaceManager:
     """工作区管理器 - 负责工作区路径的存储和管理"""
     
@@ -167,26 +166,21 @@ class WorkspaceManager:
             
         return True, ""
 
-
 def test_workspace_manager():
     """测试工作区管理器"""
     import tempfile
     import shutil
-    
-    print("=== 工作区管理器测试 ===")
-    
+
     # 创建临时测试目录
     test_dir = tempfile.mkdtemp()
-    print(f"测试目录: {test_dir}")
-    
+        
     try:
         # 测试工作区管理器
         wm = WorkspaceManager()
         
         # 测试设置工作区
         success = wm.set_workspace_path(test_dir)
-        print(f"设置工作区: {'成功' if success else '失败'}")
-        
+                
         # 创建测试.qmw文件
         test_files = ["案例1.qmw", "案例2.qmw", "subfolder/案例3.qmw"]
         for file_path in test_files:
@@ -197,21 +191,15 @@ def test_workspace_manager():
         
         # 测试文件扫描
         qmw_files = wm.scan_qmw_files()
-        print(f"扫描到的.qmw文件: {len(qmw_files)}")
         for file_path in qmw_files:
             rel_path = wm.get_relative_path(file_path)
-            print(f"  {rel_path}")
-            
+                        
         # 测试工作区验证
         is_valid, error_msg = wm.validate_workspace(test_dir)
-        print(f"工作区验证: {'通过' if is_valid else f'失败 - {error_msg}'}")
-        
-        print("工作区管理器测试完成 ✓")
-        
+
     finally:
         # 清理测试目录
         shutil.rmtree(test_dir, ignore_errors=True)
-
 
 if __name__ == "__main__":
     test_workspace_manager()

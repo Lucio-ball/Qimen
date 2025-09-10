@@ -1,11 +1,23 @@
 import json
 import datetime
+import os
+import sys
 from typing import Dict, List, Any, Union
 from .models import Palace, ChartResult
 from .calendar_utils import get_solar_term, get_si_zhu
 
 # 定义九宫飞布路径，用于排盘旋转
 LUO_SHU_PATH = [1, 8, 3, 4, 9, 2, 7, 6]
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的应用程序
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境
+        base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 
 class PaiPanEngine:
@@ -15,13 +27,15 @@ class PaiPanEngine:
         """
         构造函数，加载数据文件
         """
+        # 使用资源路径辅助函数获取正确的文件路径
+        full_path = get_resource_path(data_file_path)
         try:
-            with open(data_file_path, 'r', encoding='utf-8') as f:
+            with open(full_path, 'r', encoding='utf-8') as f:
                 self.data = json.load(f)
         except FileNotFoundError:
-            raise Exception(f"错误: 数据文件 '{data_file_path}' 未找到。")
+            raise Exception(f"错误: 数据文件 '{full_path}' 未找到。")
         except json.JSONDecodeError:
-            raise Exception(f"错误: 数据文件 '{data_file_path}' 格式不正确。")
+            raise Exception(f"错误: 数据文件 '{full_path}' 格式不正确。")
 
     def paipan(self, time_str: str) -> ChartResult:
         """

@@ -12,8 +12,6 @@ from typing import Optional, Dict, List
 import sys
 import os
 
-# 添加项目根目录到路径，以便导入ui.config
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from ui.config import DisplayConfig
 
 
@@ -462,70 +460,7 @@ def main():
         annotation_circle_radius=10
     )
     
-    # 测试场景1：正常显示
-    row1 = QHBoxLayout()
-    
-    widget1 = ParameterWidget()
-    widget1.set_data("庚", config, QColor(255, 215, 0), False, "palace_1_heaven_stem_0")  # 金黄色（金）
-    
-    widget2 = ParameterWidget()
-    widget2.set_data("乙", config, QColor(0, 180, 0), False, "palace_2_heaven_stem_0")  # 深绿色（木）
-    
-    widget3 = ParameterWidget()
-    widget3.set_data("丙", config, QColor(255, 0, 0), True, "palace_3_heaven_stem_0")  # 红色（火），加粗
-    
-    row1.addWidget(widget1)
-    row1.addWidget(widget2)
-    row1.addWidget(widget3)
-    layout.addLayout(row1)
-    
-    # 测试场景2：关闭五行颜色
-    config_no_color = DisplayConfig(use_wuxing_colors=False)
-    
-    row2 = QHBoxLayout()
-    
-    widget4 = ParameterWidget()
-    widget4.set_data("壬", config_no_color, QColor(0, 0, 255), False, "palace_4_heaven_stem_0")  # 应显示为黑色
-    
-    widget5 = ParameterWidget()
-    widget5.set_data("戊", config_no_color, QColor(139, 69, 19), True, "palace_5_heaven_stem_0")  # 应显示为黑色加粗
-    
-    row2.addWidget(widget4)
-    row2.addWidget(widget5)
-    layout.addLayout(row2)
-    
-    # 测试场景3：带标注显示
-    row3 = QHBoxLayout()
-    
-    widget6 = ParameterWidget()
-    annotation1 = {"text": "旺", "shape": "circle", "color": "#00FF00"}
-    widget6.set_data("休门", config, QColor(0, 180, 0), False, "palace_6_gate", annotation1)
-    
-    widget7 = ParameterWidget()
-    annotation2 = {"text": "空", "shape": "square", "color": "#FF0000"}
-    widget7.set_data("死门", config, QColor(139, 69, 19), True, "palace_7_gate", annotation2)
-    
-    row3.addWidget(widget6)
-    row3.addWidget(widget7)
-    layout.addLayout(row3)
-    
-    # 连接信号以测试右键菜单功能
-    def on_annotation_requested(param_id):
-        print(f"请求为 {param_id} 添加标注")
-        
-    def on_annotation_remove_requested(param_id):
-        print(f"请求删除 {param_id} 的标注")
-        
-    # 连接所有测试控件的信号
-    for widget in [widget1, widget2, widget3, widget4, widget5, widget6, widget7]:
-        widget.annotation_requested.connect(on_annotation_requested)
-        widget.annotation_remove_requested.connect(on_annotation_remove_requested)
-    
-    # 显示说明
-    from PySide6.QtWidgets import QLabel
-    info_label = QLabel("点击任意控件可切换选中状态（红色边框）")
-    info_label.setStyleSheet("color: blue; font-size: 12px; margin: 10px;")
-    layout.addWidget(info_label)
+
     
     main_window.show()
     

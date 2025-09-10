@@ -13,9 +13,6 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen
 from PySide6.QtCore import Qt, QSize
 import json
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
 from ui.widgets.palace_widget import PalaceWidget
 from ui.config import DisplayConfig
 from core.models import ChartResult

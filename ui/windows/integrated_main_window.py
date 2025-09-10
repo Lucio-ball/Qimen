@@ -22,8 +22,15 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QIcon, QAction
 
-# 添加项目根目录到路径
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的应用程序
+        base_path = sys._MEIPASS
+    else:
+        # 开发环境
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    return os.path.join(base_path, relative_path)
 
 from core.paipan_engine import PaiPanEngine
 from core.models import ChartResult, Case
@@ -361,7 +368,7 @@ class IntegratedMainWindow(QMainWindow):
             
     def _setup_window_properties(self):
         """设置窗口属性"""
-        self.setWindowTitle("奇门遁甲工作台 - 多案例管理 (最终架构)")
+        self.setWindowTitle("奇门遁甲工作台")
         self.setMinimumSize(1200, 800)
         self.resize(1600, 1000)
         
@@ -524,12 +531,13 @@ class IntegratedMainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "关于",
-            "<h3>奇门遁甲工作台 - 最终架构版本</h3>"
-            "<p>版本：3.0.0 (ARCH-20250901-013)</p>"
-            "<p>一个现代化的奇门遁甲排盘和分析工具</p>"
-            "<p>支持多案例同时管理的专业工作台</p>"
-            "<p>采用QStackedLayout架构解决停靠面板兼容性</p>"
-            "<p>©2024 Qimen Workbench Project</p>"
+            "<h3>奇门遁甲工作台 v1.0 alpha</h3>"
+            "<p>版本：v1.0 alpha (RELEASE-20250901-021)</p>"
+            "<p>一个专为奇门遁甲专业人士和深度爱好者设计的专业级桌面分析平台</p>"
+            "<p>• 多案例管理与文件式工作区</p>"
+            "<p>• 高度可定制的盘面显示系统</p>"
+            "<p>• 自动化用神标注模板</p>"
+            "<p>版权所有 © Lucio-ball 2025</p>"
         )
         
     def get_current_chart_data(self) -> Optional[ChartResult]:
@@ -613,7 +621,6 @@ class IntegratedMainWindow(QMainWindow):
     # v2.0 新增处理方法
     def _handle_template_applied(self, template_name):
         """处理模板应用"""
-        print(f"模板已应用: {template_name}")
         # 更新状态栏
         if hasattr(self, 'status_bar'):
             self.status_bar.showMessage(f"已应用模板: {template_name}", 3000)
@@ -622,7 +629,6 @@ class IntegratedMainWindow(QMainWindow):
         
     def _handle_layer_changed(self):
         """处理图层变化"""
-        print("图层状态已变化")
         # 刷新当前图表以反映图层可见性变化
         self._refresh_current_chart_annotations()
         # 如果状态栏存在，显示提示
@@ -640,28 +646,24 @@ class IntegratedMainWindow(QMainWindow):
             # 获取当前激活的案例
             current_widget = self.central_widget.get_current_tab_widget()
             if not current_widget or not hasattr(current_widget, 'case'):
-                print(f"没有激活的案例，无法应用模板 '{template_name}'")
                 return
                 
             case = current_widget.case
             if not case:
-                print(f"案例对象为空，无法应用模板 '{template_name}'")
                 return
                 
             # 加载模板数据
             import json
             import os
-            template_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "templates.json")
+            template_path = get_resource_path("data/templates.json")
             
             if not os.path.exists(template_path):
-                print(f"模板文件不存在: {template_path}")
                 return
                 
             with open(template_path, 'r', encoding='utf-8') as f:
                 templates_data = json.load(f)
                 
             if template_name not in templates_data:
-                print(f"模板 '{template_name}' 不存在")
                 return
                 
             template_rules = templates_data[template_name]
@@ -670,7 +672,7 @@ class IntegratedMainWindow(QMainWindow):
             # 获取当前激活图层
             active_layer = case.get_active_layer()
             if not active_layer:
-                print("没有激活的图层")
+                return
                 return
                 
             applied_count = 0
@@ -714,38 +716,30 @@ class IntegratedMainWindow(QMainWindow):
                     self.annotation_panel_widget._refresh_annotation_list()
                     self.annotation_panel_widget._refresh_layer_list()
                     
-                print(f"成功应用模板 '{template_name}'，添加了 {applied_count} 个标注")
             else:
-                print(f"模板 '{template_name}' 没有找到匹配的参数")
+                pass
                 
         except Exception as e:
-            print(f"应用模板失败: {str(e)}")
             import traceback
             traceback.print_exc()
             
     def _find_special_param_ids(self, chart_result, param_name: str) -> list:
         """查找特殊参数的ID"""
         if not hasattr(chart_result, 'special_params') or not chart_result.special_params:
-            print(f"ChartResult没有special_params或为空")
             return []
             
         special_params = chart_result.special_params
         if param_name not in special_params:
-            print(f"特殊参数 '{param_name}' 不存在于special_params中")
-            print(f"可用的特殊参数: {list(special_params.keys())}")
             return []
             
         param_ids = []
         param_locations = special_params[param_name]
-        
-        print(f"查找特殊参数 '{param_name}', 位置数量: {len(param_locations)}")
         
         for location_info in param_locations:
             # 直接使用location_info中的id字段
             param_id = location_info.get("id", "")
             if param_id:
                 param_ids.append(param_id)
-                print(f"  找到位置: {param_id}")
                 
         return param_ids
         
@@ -1133,7 +1127,6 @@ class IntegratedMainWindow(QMainWindow):
             cases_summary = self.data_manager.get_all_cases_summary()
             self.case_browser_widget.refresh_list(cases_summary)
         except Exception as e:
-            print(f"刷新案例列表失败：{e}")
             self.case_browser_widget.set_status("刷新失败")
             
     def _create_case_tab(self, case: Case):
@@ -1205,14 +1198,12 @@ class IntegratedMainWindow(QMainWindow):
                 self.current_config = self.config_manager.load_display_config()
                 self.general_config = self.config_manager.load_general_config()
                 self.data_config = self.config_manager.load_data_config()
-                print("首选项设置已保存")
             else:
                 # 用户点击取消，恢复原始配置
                 self.current_config = self.config_manager.load_display_config()
                 self.general_config = self.config_manager.load_general_config()
                 self.data_config = self.config_manager.load_data_config()
                 self._apply_config(self.current_config)
-                print("首选项设置已取消")
                 
         except Exception as e:
             QMessageBox.critical(
@@ -1238,10 +1229,9 @@ class IntegratedMainWindow(QMainWindow):
             # 应用数据配置（工作区路径等）
             self._apply_data_config(data_config)
             
-            print(f"所有配置已应用")
             
         except Exception as e:
-            print(f"应用配置时出错: {e}")
+            pass
     
     def _apply_general_config(self, config: dict):
         """应用通用配置"""
@@ -1250,15 +1240,15 @@ class IntegratedMainWindow(QMainWindow):
             theme = config.get("theme", "light")
             if theme == "dark":
                 # 未来可以实现暗色主题
-                print("暗色主题功能待实现")
+                pass
             elif theme == "light":
                 # 应用亮色主题
-                print("应用亮色主题")
+                pass
             
             # 语言切换
             language = config.get("language", "zh_CN")
             if language != "zh_CN":
-                print("多语言功能待实现")
+                pass
             
             # 自动加载工作区设置
             auto_load = config.get("auto_load_last_workspace", True)
@@ -1266,7 +1256,7 @@ class IntegratedMainWindow(QMainWindow):
                 self.workspace_manager.auto_load_enabled = auto_load
                 
         except Exception as e:
-            print(f"应用通用配置时出错: {e}")
+            pass
     
     def _apply_data_config(self, config: dict):
         """应用数据配置"""
@@ -1276,11 +1266,8 @@ class IntegratedMainWindow(QMainWindow):
             if hasattr(self, 'workspace_manager') and default_path:
                 self.workspace_manager.default_workspace_path = default_path
             
-            # 其他数据配置可以在这里扩展
-            print(f"数据配置已应用: 默认工作区={default_path}")
-            
         except Exception as e:
-            print(f"应用数据配置时出错: {e}")
+            pass
     
     def _apply_config(self, config: DisplayConfig):
         """应用配置到所有相关组件"""
@@ -1303,10 +1290,8 @@ class IntegratedMainWindow(QMainWindow):
             # 应用到其他可能需要配置的组件
             # （根据需要扩展）
             
-            print(f"配置已应用: 五行颜色={config.use_wuxing_colors}, 值符时粗体={config.show_zhi_fu_shi_bold}")
-            
         except Exception as e:
-            print(f"应用配置时出错: {e}")
+            pass
 
 
 def main():

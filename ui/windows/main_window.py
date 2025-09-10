@@ -53,7 +53,6 @@ class MainWindow(QMainWindow):
             self.setCentralWidget(widget)
             
         except (FileNotFoundError, RuntimeError) as e:
-            print(f"UI加载错误: {e}")
             # 创建基础窗口作为备选方案
             self._create_fallback_ui()
     

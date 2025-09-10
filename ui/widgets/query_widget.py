@@ -465,7 +465,6 @@ class QueryWidget(QWidget):
                     min-width: 40px;
                 }
             """)
-            print(f"年命计算错误: {e}")
             
     def _emit_query_request(self):
         """发射起局请求信号"""
@@ -477,7 +476,7 @@ class QueryWidget(QWidget):
         pattern = r'^\d{12}$'
         if not re.match(pattern, time_text):
             # 时间格式错误，不发射信号
-            print("时间格式错误，无法起局")
+            return
             return
             
         try:
@@ -492,7 +491,6 @@ class QueryWidget(QWidget):
             query_time = datetime.datetime(year, month, day, hour, minute)
             
         except (ValueError, OverflowError):
-            print("时间格式错误，无法起局")
             return
         
         # 获取年命干支
@@ -576,50 +574,3 @@ class QueryWidget(QWidget):
                 self.time_input.clearFocus()
 
 
-# 独立测试脚本
-if __name__ == "__main__":
-    import sys
-    import os
-    
-    # 添加项目根目录到Python路径
-    project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    sys.path.insert(0, project_root)
-    
-    from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
-    
-    def on_query_requested(data):
-        """处理起局请求的测试函数"""
-        print("=" * 50)
-        print("收到起局请求:")
-        print(f"起局时间: {data['query_time']}")
-        print(f"年命干支: {data['nian_ming']}")
-        print(f"所问之事: {data['notes']}")
-        print("=" * 50)
-    
-    # 创建应用程序
-    app = QApplication(sys.argv)
-    
-    # 创建测试窗口
-    window = QMainWindow()
-    window.setWindowTitle("QueryWidget 测试")
-    window.setGeometry(100, 100, 500, 400)
-    
-    # 创建中央控件
-    central_widget = QWidget()
-    window.setCentralWidget(central_widget)
-    
-    # 创建布局
-    layout = QVBoxLayout(central_widget)
-    
-    # 创建QueryWidget实例
-    query_widget = QueryWidget()
-    layout.addWidget(query_widget)
-    
-    # 连接信号到测试函数
-    query_widget.query_requested.connect(on_query_requested)
-    
-    # 显示窗口
-    window.show()
-    
-    # 运行应用程序
-    sys.exit(app.exec())
