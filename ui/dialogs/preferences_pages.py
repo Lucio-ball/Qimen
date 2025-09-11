@@ -163,8 +163,8 @@ class ChartDisplayPage(QWidget):
         self.use_wuxing_colors_cb.toggled.connect(self._on_config_changed)
         style_layout.addWidget(self.use_wuxing_colors_cb)
         
-        self.show_zhi_fu_shi_bold_cb = QCheckBox("加粗显示值符时")
-        self.show_zhi_fu_shi_bold_cb.setToolTip("将值符时的文字以粗体形式显示")
+        self.show_zhi_fu_shi_bold_cb = QCheckBox("加粗显示值符/值使")
+        self.show_zhi_fu_shi_bold_cb.setToolTip("将值符和值使的文字以粗体形式显示")
         self.show_zhi_fu_shi_bold_cb.toggled.connect(self._on_config_changed)
         style_layout.addWidget(self.show_zhi_fu_shi_bold_cb)
         
