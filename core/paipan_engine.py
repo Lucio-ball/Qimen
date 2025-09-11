@@ -55,7 +55,7 @@ class PaiPanEngine:
         result = ChartResult()
         
         # 设置起局时间（用于界面显示）
-        result.qi_ju_time = target_dt.strftime("%Y年%m月%d日 %H:%M")
+        result.qi_ju_time = f"{target_dt.year}年{target_dt.month:02d}月{target_dt.day:02d}日 {target_dt.hour:02d}:{target_dt.minute:02d}"
 
         # 步骤 1 & 2: 计算节气与四柱
         result.jieqi = get_solar_term(target_dt)
@@ -395,7 +395,7 @@ class PaiPanEngine:
             8: (["丁", "己", "庚"], "丑"),  # 艮8宫 -> 丑位
             4: (["辛", "壬"], "辰"),        # 巽4宫 -> 辰位
             2: (["乙", "癸"], "未"),        # 坤2宫 -> 未位
-            6: (["丙", "戊"], "戌"),        # 乾6宫 -> 戌位
+            6: (["乙", "丙", "戊"], "戌"),  # 乾6宫 -> 戌位
         }
         
         # 检查天盘干和地盘干是否入墓

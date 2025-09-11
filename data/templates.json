@@ -56,33 +56,13 @@
   "工作晋升": [
     {
       "param_type": "baMen",
-      "param_value": "开",
-      "label": "开门(工作)"
+      "label": "工作",
+      "param_value": "开门"
     },
     {
-      "param_type": "zhiFu",
-      "param_value": null,
-      "label": "值符(领导)"
-    },
-    {
-      "param_type": "riGan",
-      "param_value": null,
-      "label": "日干(求测人)"
-    },
-    {
-      "param_type": "jiuXing",
-      "param_value": "冲",
-      "label": "天冲(冲动)"
-    },
-    {
-      "param_type": "jiuXing",
-      "param_value": "辅",
-      "label": "天辅(贵人)"
-    },
-    {
-      "param_type": "baMen",
-      "param_value": "生",
-      "label": "生门(财源)"
+      "param_type": "special",
+      "label": "上级领导",
+      "param_name": "太岁"
     }
   ],
   "测病健康": [

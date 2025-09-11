@@ -18,5 +18,5 @@ else:
     sys.path.insert(0, current_dir)
 
 if __name__ == "__main__":
-    from main_integrated import main  # 调用集成版本
-    main()
+    from ui.app_integrated import run_integrated  # 调用集成版本
+    sys.exit(run_integrated())

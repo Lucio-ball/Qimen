@@ -445,6 +445,9 @@ class IntegratedMainWindow(QMainWindow):
             # 将case对象关联到chart_widget以便后续使用
             chart_widget.case = case
             
+            # 连接参数组件信号（重要：这是右键标注功能的关键）
+            self._connect_parameter_widget_signals(chart_widget)
+            
             # 添加到标签页
             tab_index = self.central_widget.add_tab(chart_widget, case_title)
             
@@ -847,11 +850,12 @@ class IntegratedMainWindow(QMainWindow):
         query_dialog = QueryDialog(self)
         
         if query_dialog.exec() == QDialog.Accepted:
-            query_data = query_dialog.get_query_data()
+            query_data = query_dialog.get_data()
             
             try:
                 # 生成排盘结果
-                chart_result = self.engine.calculate_chart(query_data)
+                time_str = query_data['query_time'].strftime('%Y%m%d%H%M%S')
+                chart_result = self.engine.paipan(time_str)
                 
                 # 创建案例
                 case = Case(title="新案例", chart_result=chart_result)
@@ -900,11 +904,12 @@ class IntegratedMainWindow(QMainWindow):
         query_dialog = QueryDialog(self)
         
         if query_dialog.exec() == QDialog.Accepted:
-            query_data = query_dialog.get_query_data()
+            query_data = query_dialog.get_data()
             
             try:
                 # 生成排盘结果
-                chart_result = self.engine.calculate_chart(query_data)
+                time_str = query_data['query_time'].strftime('%Y%m%d%H%M%S')
+                chart_result = self.engine.paipan(time_str)
                 
                 # 创建案例
                 case = Case(title="新案例", chart_result=chart_result)

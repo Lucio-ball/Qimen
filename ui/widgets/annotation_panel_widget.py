@@ -703,10 +703,16 @@ class AnnotationPanelWidget(QWidget):
         elif param_type == "baMen":
             # 八门 - 查找指定的八门
             if param_value:
+                # 处理八门名称的两种格式：完整名称（如"开门"）和简称（如"开"）
+                gate_name = param_value
+                if param_value.endswith("门") and len(param_value) > 1:
+                    gate_name = param_value[:-1]  # 去掉"门"字，如"开门" -> "开"
+                
                 for palace in chart_result.palaces:
                     if palace.index == 0 or palace.index == 5:  # 跳过无效宫位
                         continue
-                    if palace.gates == param_value:
+                    # 使用新的数据模型：tian_pan_gates 列表
+                    if gate_name in palace.tian_pan_gates:
                         matching_ids.append(f"palace_{palace.index}_tian_pan_gate_0")
                         
         elif param_type == "baShen":
