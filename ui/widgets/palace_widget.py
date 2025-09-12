@@ -64,7 +64,7 @@ class PalaceWidget(QWidget):
         
         for pos_id, (row, col) in positions.items():
             widget = ParameterWidget()
-            widget.setMinimumSize(55, 50)  # 增加最小宽度以适应完整名称
+            widget.setMinimumSize(60, 55)  # 增加最小宽度以适应完整名称
             self.param_widgets[pos_id] = widget
             self.layout.addWidget(widget, row, col)
             

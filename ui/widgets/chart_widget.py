@@ -34,7 +34,7 @@ class SquareWidget(QWidget):
     
     def sizeHint(self):
         """返回推荐大小"""
-        return QSize(700, 700)
+        return QSize(800, 800)
 
 
 class ChartWidget(QWidget):
@@ -82,7 +82,7 @@ class ChartWidget(QWidget):
         
         # Fix for inconsistent size bug on first tab creation
         # 设置固定尺寸确保所有新建的ChartWidget标签页大小一致
-        self.setFixedSize(1000, 800)
+        self.setFixedSize(1100, 900)
         
     def init_ui(self):
         """初始化用户界面"""
@@ -202,7 +202,7 @@ class ChartWidget(QWidget):
         )
         
         # 设置较大的最小尺寸
-        chart_panel.setMinimumSize(700, 700)
+        chart_panel.setMinimumSize(800, 800)
         
         # 使用5x5网格布局：外圈标注 + 中心3x3九宫格
         chart_layout = QGridLayout(chart_panel)
@@ -237,15 +237,15 @@ class ChartWidget(QWidget):
             # 判断标注类型：左右/上下
             if col == 0 or col == 4:
                 # 左右标注，高度与宫位一致，宽度较窄
-                label.setMinimumWidth(24)
-                label.setMaximumWidth(36)
-                label.setMinimumHeight(120)
+                label.setMinimumWidth(28)
+                label.setMaximumWidth(40)
+                label.setMinimumHeight(140)
                 label.setMaximumHeight(16777215)
             elif row == 0 or row == 4:
                 # 上下标注，宽度与宫位一致，高度较窄
-                label.setMinimumHeight(24)
-                label.setMaximumHeight(36)
-                label.setMinimumWidth(120)
+                label.setMinimumHeight(28)
+                label.setMaximumHeight(40)
+                label.setMinimumWidth(140)
                 label.setMaximumWidth(16777215)
             else:
                 # 斜角标注，设置为正方形
