@@ -1,7 +1,7 @@
 """
 UI配置相关的数据类定义
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 from PySide6.QtGui import QColor
 
@@ -27,6 +27,15 @@ class DisplayConfig:
     show_di_pan_gate: bool = True  # 显示地盘门
     show_di_pan_star: bool = True  # 显示地盘星
     
+    # 五行颜色自定义配置（新增）
+    wuxing_colors: dict[str, str] = field(default_factory=lambda: {
+        "金": "#f5aa11",  # 金黄色
+        "木": "#39a75a",  # 绿色
+        "水": "#437ee4",  # 蓝色
+        "火": "#e64a35",  # 红色
+        "土": "#c77f37"   # 土黄色
+    })
+    
     # 原有的数值配置
     annotation_background_alpha: int = 128  # 标注背景透明度 (0-255)
     selected_border_width: int = 2  # 选中边框宽度
@@ -46,13 +55,13 @@ class DisplayConfig:
         if not self.use_wuxing_colors:
             return QColor(0, 0, 0)  # 黑色
             
-        # 简化的颜色映射（在实际应用中应该从data/core_parameters.json读取）
-        wuxing_colors = {
-            "木": QColor(0x39, 0xa7, 0x5a),      # 绿色 #39a75a
-            "火": QColor(0xe6, 0x4a, 0x35),      # 红色 #e64a35
-            "土": QColor(0xc7, 0x7f, 0x37),      # 土黄色 #c77f37
-            "金": QColor(0xf5, 0xaa, 0x11),      # 金黄色 #f5aa11
-            "水": QColor(0x43, 0x7e, 0xe4),      # 蓝色 #437ee4
+        # 使用自定义的五行颜色配置
+        default_colors = {
+            "木": QColor(self.wuxing_colors["木"]),
+            "火": QColor(self.wuxing_colors["火"]),
+            "土": QColor(self.wuxing_colors["土"]),
+            "金": QColor(self.wuxing_colors["金"]),
+            "水": QColor(self.wuxing_colors["水"]),
         }
         
         # 简化的映射逻辑（在实际应用中应该查询data/core_parameters.json）
@@ -75,4 +84,4 @@ class DisplayConfig:
         }
         
         wuxing = color_map.get(param_name, "土")  # 默认土
-        return wuxing_colors.get(wuxing, QColor(0, 0, 0))
+        return default_colors.get(wuxing, QColor(0, 0, 0))

@@ -144,6 +144,20 @@ class ConfigManager:
                 type=int
             )
             
+            # 加载五行颜色配置 (新增)
+            wuxing_colors_str = self.settings.value(
+                "display/wuxing_colors",
+                json.dumps(default_config.wuxing_colors)
+            )
+            try:
+                wuxing_colors = json.loads(wuxing_colors_str) if isinstance(wuxing_colors_str, str) else default_config.wuxing_colors
+                # 确保包含所有五行
+                for wuxing in ["金", "木", "水", "火", "土"]:
+                    if wuxing not in wuxing_colors:
+                        wuxing_colors[wuxing] = default_config.wuxing_colors[wuxing]
+            except (json.JSONDecodeError, TypeError):
+                wuxing_colors = default_config.wuxing_colors
+            
             # 构建配置对象
             config = DisplayConfig(
                 use_wuxing_colors=use_wuxing_colors,
@@ -158,6 +172,7 @@ class ConfigManager:
                 show_yue_ling=show_yue_ling,
                 show_di_pan_gate=show_di_pan_gate,
                 show_di_pan_star=show_di_pan_star,
+                wuxing_colors=wuxing_colors,  # 新增
                 annotation_background_alpha=annotation_background_alpha,
                 selected_border_width=selected_border_width,
                 annotation_circle_radius=annotation_circle_radius
@@ -214,6 +229,9 @@ class ConfigManager:
             self.settings.setValue("display/annotation_background_alpha", config.annotation_background_alpha)
             self.settings.setValue("display/selected_border_width", config.selected_border_width)
             self.settings.setValue("display/annotation_circle_radius", config.annotation_circle_radius)
+            
+            # 保存五行颜色配置 (新增)
+            self.settings.setValue("display/wuxing_colors", json.dumps(config.wuxing_colors))
             
             # 确保配置写入磁盘
             self.settings.sync()

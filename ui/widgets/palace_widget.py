@@ -68,7 +68,7 @@ class PalaceWidget(QWidget):
             self.param_widgets[pos_id] = widget
             self.layout.addWidget(widget, row, col)
             
-        # 五行颜色映射
+        # 五行颜色映射（将在update_data中从config更新）
         self.wuxing_colors = {
             "木": QColor(0, 180, 0),      # 深绿色
             "火": QColor(255, 0, 0),      # 红色  
@@ -76,6 +76,7 @@ class PalaceWidget(QWidget):
             "金": QColor(255, 215, 0),    # 金黄色 (Gold)
             "水": QColor(0, 0, 255),      # 蓝色
         }
+        self._config = None  # 保存当前的DisplayConfig引用
         
     def update_data(self, palace_data: Palace, chart_data: ChartResult, 
                     config: DisplayConfig, global_data: dict):
@@ -88,10 +89,18 @@ class PalaceWidget(QWidget):
             config: DisplayConfig对象，用于控制显示逻辑
             global_data: 从data/core_parameters.json加载的全局数据字典，用于查询五行等基础信息
         """
-        # 1. 清空所有控件
+        # 1. 保存配置并更新五行颜色映射
+        self._config = config
+        self.global_data = global_data
+        
+        # 更新五行颜色映射以使用用户自定义颜色
+        for wuxing, color_hex in config.wuxing_colors.items():
+            self.wuxing_colors[wuxing] = QColor(color_hex)
+        
+        # 2. 清空所有控件
         self._clear_all_widgets(config)
         
-        # 2. 判断是否为中宫
+        # 3. 判断是否为中宫
         if palace_data.index == 5:
             self._update_center_palace(palace_data, chart_data, config, global_data)
         else:
@@ -320,6 +329,10 @@ class PalaceWidget(QWidget):
             对应的五行颜色，如果找不到返回黑色
         """
         try:
+            # 如果config不可用或不使用五行颜色，返回黑色
+            if not self._config or not self._config.use_wuxing_colors:
+                return QColor(0, 0, 0)
+            
             # 对于八神，如果传入的是简称，先获取完整名称
             if param_type == "baShen":
                 param_name = self._get_full_name("baShen", param_name)

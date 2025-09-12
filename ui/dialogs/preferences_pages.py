@@ -22,10 +22,10 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel, QComboBox,
     QCheckBox, QLineEdit, QPushButton, QFileDialog, QMessageBox, QListWidget,
     QTableWidget, QTableWidgetItem, QHeaderView, QSplitter, QTextEdit,
-    QFrame, QSpacerItem, QSizePolicy, QGridLayout
+    QFrame, QSpacerItem, QSizePolicy, QGridLayout, QColorDialog
 )
 from PySide6.QtCore import Qt, Signal, QUrl
-from PySide6.QtGui import QFont, QPixmap, QDesktopServices
+from PySide6.QtGui import QFont, QPixmap, QDesktopServices, QColor
 
 from ui.config import DisplayConfig
 
@@ -221,6 +221,43 @@ class ChartDisplayPage(QWidget):
         
         layout.addWidget(visibility_group)
         
+        # 五行颜色自定义组 (新增)
+        colors_group = QGroupBox("五行颜色自定义")
+        colors_layout = QGridLayout(colors_group)
+        
+        self.color_preview_buttons = {}
+        self.color_edit_buttons = {}
+        
+        # 创建五行颜色编辑界面
+        wuxing_names = ["金", "木", "水", "火", "土"]
+        for i, wuxing in enumerate(wuxing_names):
+            # 标签
+            label = QLabel(f"{wuxing}:")
+            colors_layout.addWidget(label, i, 0)
+            
+            # 颜色预览按钮
+            preview_btn = QPushButton()
+            preview_btn.setObjectName(f"color_preview_{wuxing}")
+            preview_btn.setFixedSize(40, 30)
+            preview_btn.setFlat(True)
+            preview_btn.setText("")  # 不显示文字，只显示颜色
+            self.color_preview_buttons[wuxing] = preview_btn
+            colors_layout.addWidget(preview_btn, i, 1)
+            
+            # 编辑按钮
+            edit_btn = QPushButton("编辑...")
+            edit_btn.setFixedWidth(60)
+            edit_btn.clicked.connect(lambda checked, w=wuxing: self._on_edit_color(w))
+            self.color_edit_buttons[wuxing] = edit_btn
+            colors_layout.addWidget(edit_btn, i, 2)
+        
+        # 恢复默认颜色按钮
+        restore_btn = QPushButton("恢复默认颜色")
+        restore_btn.clicked.connect(self._on_restore_default_colors)
+        colors_layout.addWidget(restore_btn, 5, 1, 1, 2)
+        
+        layout.addWidget(colors_group)
+        
         # 添加弹性空间
         layout.addStretch()
     
@@ -244,10 +281,52 @@ class ChartDisplayPage(QWidget):
             show_yue_ling=self.show_yue_ling_cb.isChecked(),
             show_di_pan_gate=self.show_di_pan_gate_cb.isChecked(),
             show_di_pan_star=self.show_di_pan_star_cb.isChecked(),
+            wuxing_colors=self.current_config.wuxing_colors,  # 新增：保持当前的颜色配置
             annotation_background_alpha=self.current_config.annotation_background_alpha,
             selected_border_width=self.current_config.selected_border_width,
             annotation_circle_radius=self.current_config.annotation_circle_radius
         )
+    
+    def _on_edit_color(self, wuxing: str):
+        """编辑五行颜色"""
+        current_color = QColor(self.current_config.wuxing_colors[wuxing])
+        
+        # 弹出颜色选择对话框
+        color = QColorDialog.getColor(current_color, self, f"选择{wuxing}的颜色")
+        
+        if color.isValid():
+            # 更新配置
+            self.current_config.wuxing_colors[wuxing] = color.name()
+            
+            # 更新预览按钮
+            self._update_color_preview_button(wuxing, color.name())
+            
+            # 触发配置更改信号
+            self._on_config_changed()
+    
+    def _on_restore_default_colors(self):
+        """恢复默认颜色"""
+        default_config = DisplayConfig()
+        self.current_config.wuxing_colors = default_config.wuxing_colors.copy()
+        
+        # 更新所有预览按钮
+        for wuxing, color_hex in self.current_config.wuxing_colors.items():
+            self._update_color_preview_button(wuxing, color_hex)
+        
+        # 触发配置更改信号
+        self._on_config_changed()
+    
+    def _update_color_preview_button(self, wuxing: str, color_hex: str):
+        """更新颜色预览按钮"""
+        if wuxing in self.color_preview_buttons:
+            button = self.color_preview_buttons[wuxing]
+            # 设置按钮背景色为选择的颜色
+            button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #888;")
+    
+    def _update_all_color_previews(self):
+        """更新所有颜色预览按钮"""
+        for wuxing, color_hex in self.current_config.wuxing_colors.items():
+            self._update_color_preview_button(wuxing, color_hex)
     
     def load_config(self, config: DisplayConfig):
         """加载配置到UI"""
@@ -268,6 +347,9 @@ class ChartDisplayPage(QWidget):
         self.show_yue_ling_cb.setChecked(config.show_yue_ling)
         self.show_di_pan_gate_cb.setChecked(config.show_di_pan_gate)
         self.show_di_pan_star_cb.setChecked(config.show_di_pan_star)
+        
+        # 五行颜色设置 (新增)
+        self._update_all_color_previews()
     
     def get_config(self) -> DisplayConfig:
         """获取当前配置"""
