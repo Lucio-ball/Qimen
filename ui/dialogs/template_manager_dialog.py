@@ -11,15 +11,7 @@ import os
 import sys
 from typing import Dict, List, Optional
 
-def get_resource_path(relative_path):
-    """获取资源文件的绝对路径，兼容开发环境和PyInstaller打包环境"""
-    if getattr(sys, 'frozen', False):
-        # 如果是打包后的应用程序
-        base_path = sys._MEIPASS
-    else:
-        # 开发环境
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    return os.path.join(base_path, relative_path)
+from core.path_utils import get_templates_file_path, ensure_default_templates
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QSplitter,
     QListWidget, QListWidgetItem, QLineEdit, QTableWidget, 
@@ -41,8 +33,11 @@ class TemplateManagerDialog(QDialog):
         self.setWindowTitle("模板管理器")
         self.setMinimumSize(800, 600)
         
-        # 数据文件路径
-        self.templates_file = get_resource_path("data/templates.json")
+        # 数据文件路径 - 使用用户数据目录
+        self.templates_file = get_templates_file_path()
+        
+        # 确保默认模板文件存在
+        ensure_default_templates()
         
         # 当前编辑的模板数据
         self.current_template_data: List[Dict] = []

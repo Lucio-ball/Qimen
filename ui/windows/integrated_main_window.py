@@ -661,7 +661,12 @@ class IntegratedMainWindow(QMainWindow):
             # 加载模板数据
             import json
             import os
-            template_path = get_resource_path("data/templates.json")
+            from core.path_utils import get_templates_file_path, ensure_default_templates
+            
+            # 确保模板文件存在
+            ensure_default_templates()
+            
+            template_path = get_templates_file_path()
             
             if not os.path.exists(template_path):
                 return

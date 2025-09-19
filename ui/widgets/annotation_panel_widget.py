@@ -221,8 +221,14 @@ class AnnotationPanelWidget(QWidget):
     def _load_templates(self):
         """加载模板数据"""
         try:
-            # 使用资源路径函数获取正确的模板文件路径
-            template_path = get_resource_path("data/templates.json")
+            # 使用用户数据目录的模板文件路径
+            from core.path_utils import get_templates_file_path, ensure_default_templates
+            
+            # 确保默认模板文件存在
+            ensure_default_templates()
+            
+            # 加载用户模板文件
+            template_path = get_templates_file_path()
             if os.path.exists(template_path):
                 with open(template_path, 'r', encoding='utf-8') as f:
                     self.templates = json.load(f)
