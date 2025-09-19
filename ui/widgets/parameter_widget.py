@@ -54,10 +54,16 @@ class ParameterWidget(QWidget):
         self._annotation_texts: List[str] = []  # 多重标注文本
         self._dual_stars: List[str] = []  # 双星信息
         
+        # 参数状态分析数据（新增）
+        self._analysis_data: Dict[str, str] = {}  # 参数状态分析数据
+        
         # 设置控件的基本属性 - 调整尺寸以适应更长文本
         self.setMinimumSize(45, 40)
         self.setMaximumSize(80, 60)  # 增加最大宽度以适应"天蓬"、"生门"等完整名称
         self.resize(55, 50)
+        
+        # 启用鼠标跟踪和tooltip功能
+        self.setMouseTracking(True)  # 启用鼠标跟踪以检测悬停
         
         # 启用右键菜单
         self.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -65,7 +71,8 @@ class ParameterWidget(QWidget):
         
     def set_data(self, text: str, config: DisplayConfig, color: QColor, 
                  is_bold: bool, param_id: str = "", annotation_texts: Optional[List[str]] = None,
-                 dual_stars: Optional[List[str]] = None, style_type: str = "primary"):
+                 dual_stars: Optional[List[str]] = None, style_type: str = "primary",
+                 analysis_data: Optional[Dict[str, str]] = None):
         """
         设置控件的显示数据和配置
         
@@ -78,6 +85,7 @@ class ParameterWidget(QWidget):
             annotation_texts: 标注文本列表 (e.g., ["用神", "丈夫"])
             dual_stars: 双星列表，用于禽芮等情况 (e.g., ["芮", "禽"])
             style_type: 样式类型，'primary'为主要样式（天盘），'secondary'为次要样式（地盘）
+            analysis_data: 参数状态分析数据字典 (e.g., {"天干长生": "帝旺", "八门旺相": "旺"})
         """
         self._text = text
         self._config = config
@@ -87,6 +95,7 @@ class ParameterWidget(QWidget):
         self._annotation_texts = annotation_texts or []
         self._dual_stars = dual_stars or []  # 存储双星信息
         self._style_type = style_type  # 存储样式类型
+        self._analysis_data = analysis_data or {}  # 存储参数状态分析数据
         
         # 触发重绘
         self.update()
@@ -117,6 +126,14 @@ class ParameterWidget(QWidget):
         """获取标注数量"""
         return len(self._annotation_texts)
         
+    def get_analysis_data(self) -> Dict[str, str]:
+        """获取参数状态分析数据"""
+        return self._analysis_data.copy()
+        
+    def has_parameter_state(self, state_type: str) -> bool:
+        """检查是否有指定类型的参数状态"""
+        return state_type in self._analysis_data
+        
     def paintEvent(self, event):
         """
         自定义绘制事件处理
@@ -144,6 +161,17 @@ class ParameterWidget(QWidget):
             # 3. 绘制标注（如果有）
             if self._annotation_texts:
                 self._draw_annotations(painter)
+                
+            # 4. 绘制参数状态角标（如果启用且有数据）
+            if (self._config.show_parameter_states and 
+                self._analysis_data and 
+                any([
+                    self._config.show_tiangan_changsheng,
+                    self._config.show_bamen_wangxiang, 
+                    self._config.show_jiuxing_wangxiang,
+                    self._config.show_bashen_wangxiang
+                ])):
+                self._draw_parameter_state_badges(painter)
                 
         finally:
             painter.end()
@@ -352,6 +380,206 @@ class ParameterWidget(QWidget):
         """
         # 移除左键选中功能，只保留右键菜单
         super().mousePressEvent(event)
+        
+    def mouseMoveEvent(self, event):
+        """
+        处理鼠标移动事件，更新tooltip显示参数状态信息
+        
+        Args:
+            event: 鼠标移动事件
+        """
+        # 生成tooltip文本
+        tooltip_text = self._generate_tooltip_text()
+        
+        # 设置tooltip
+        if tooltip_text:
+            self.setToolTip(tooltip_text)
+        else:
+            self.setToolTip("")
+            
+        super().mouseMoveEvent(event)
+        
+    def _generate_tooltip_text(self) -> str:
+        """
+        生成包含参数状态信息的tooltip文本
+        
+        Returns:
+            str: tooltip文本，如果没有状态信息则返回空字符串
+        """
+        if not self._analysis_data:
+            return ""
+            
+        tooltip_lines = []
+        
+        # 添加参数基本信息
+        if self._text:
+            tooltip_lines.append(f"参数: {self._text}")
+            tooltip_lines.append("-" * 20)
+        
+        # 添加参数状态信息
+        state_info = []
+        
+        # 天干长生状态（支持多个状态）
+        if self._config and self._config.show_tiangan_changsheng:
+            changsheng_states = []
+            if "天干长生" in self._analysis_data:
+                changsheng_states.append(self._analysis_data['天干长生'])
+            if "天干长生_2" in self._analysis_data:
+                changsheng_states.append(self._analysis_data['天干长生_2'])
+            if changsheng_states:
+                state_info.append(f"长生状态: {' | '.join(changsheng_states)}")
+            
+        # 八门旺相状态
+        if ("八门旺相" in self._analysis_data and 
+            self._config and self._config.show_bamen_wangxiang):
+            state_info.append(f"八门旺相: {self._analysis_data['八门旺相']}")
+            
+        # 九星旺相状态
+        if ("九星旺相" in self._analysis_data and 
+            self._config and self._config.show_jiuxing_wangxiang):
+            state_info.append(f"九星旺相: {self._analysis_data['九星旺相']}")
+            
+        # 八神旺相状态
+        if ("八神旺相" in self._analysis_data and 
+            self._config and self._config.show_bashen_wangxiang):
+            state_info.append(f"八神旺相: {self._analysis_data['八神旺相']}")
+        
+        if state_info:
+            tooltip_lines.extend(state_info)
+            
+            # 添加状态说明
+            tooltip_lines.append("-" * 20)
+            tooltip_lines.append("旺相说明:")
+            tooltip_lines.append("旺(红)>相(橙)>休(灰)>囚(棕)>死(灰)")
+            
+        return "\n".join(tooltip_lines) if tooltip_lines else ""
+        
+    def _draw_parameter_state_badges(self, painter: QPainter):
+        """
+        绘制参数状态角标（右下角浅色圆形角标）
+        
+        根据配置显示不同类型的参数状态：
+        - 天干长生状态
+        - 八门旺相状态  
+        - 九星旺相状态
+        - 八神旺相状态
+        
+        Args:
+            painter: QPainter对象
+        """
+        if not self._analysis_data:
+            return
+            
+        # 角标基本参数
+        badge_radius = 8  # 角标圆形半径
+        badge_margin = 2  # 距离边缘的边距
+        badge_spacing = 16  # 多个角标之间的间距
+        
+        # 收集需要显示的状态
+        states_to_show = []
+        
+        # 检查天干长生状态（支持多个状态）
+        if self._config.show_tiangan_changsheng:
+            # 检查主状态
+            if "天干长生" in self._analysis_data:
+                states_to_show.append(("天干长生", self._analysis_data["天干长生"]))
+            # 检查第二个状态
+            if "天干长生_2" in self._analysis_data:
+                states_to_show.append(("天干长生_2", self._analysis_data["天干长生_2"]))
+        
+        # 检查八门旺相状态
+        if (self._config.show_bamen_wangxiang and 
+            "八门旺相" in self._analysis_data):
+            states_to_show.append(("八门旺相", self._analysis_data["八门旺相"]))
+            
+        # 检查九星旺相状态
+        if (self._config.show_jiuxing_wangxiang and 
+            "九星旺相" in self._analysis_data):
+            states_to_show.append(("九星旺相", self._analysis_data["九星旺相"]))
+            
+        # 检查八神旺相状态  
+        if (self._config.show_bashen_wangxiang and 
+            "八神旺相" in self._analysis_data):
+            states_to_show.append(("八神旺相", self._analysis_data["八神旺相"]))
+        
+        if not states_to_show:
+            return
+            
+        # 计算角标位置（从右下角开始，向左排列）
+        start_x = self.width() - badge_radius - badge_margin
+        start_y = self.height() - badge_radius - badge_margin
+        
+        for i, (state_type, state_value) in enumerate(states_to_show):
+            # 计算当前角标的位置
+            badge_x = start_x - (i * badge_spacing)
+            badge_y = start_y
+            
+            # 如果超出控件范围，换行显示
+            if badge_x < badge_radius + badge_margin:
+                badge_x = start_x - ((i % 2) * badge_spacing)
+                badge_y = start_y - badge_spacing
+                
+            # 获取状态对应的颜色
+            badge_color = self._config.get_parameter_state_color(state_value)
+            
+            # 绘制角标圆形背景
+            painter.setBrush(QBrush(badge_color))
+            painter.setPen(QPen(badge_color.darker(120), 1))  # 深一点的边框
+            painter.drawEllipse(
+                int(badge_x - badge_radius),
+                int(badge_y - badge_radius), 
+                badge_radius * 2, 
+                badge_radius * 2
+            )
+            
+            # 绘制状态文字（处理特殊显示规则）
+            state_char = self._get_display_char_for_state(state_type, state_value)
+            
+            # 设置角标文字字体
+            badge_font = painter.font()
+            badge_font.setPointSize(8)  # 小字体
+            badge_font.setBold(True)
+            painter.setFont(badge_font)
+            
+            # 设置文字颜色（深色以确保可读性）
+            painter.setPen(QPen(QColor(50, 50, 50)))
+            
+            # 绘制文字（居中）
+            text_rect = QRect(
+                int(badge_x - badge_radius),
+                int(badge_y - badge_radius),
+                badge_radius * 2,
+                badge_radius * 2
+            )
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, state_char)
+    
+    def _get_display_char_for_state(self, state_type: str, state_value: str) -> str:
+        """
+        根据状态类型和值获取显示字符
+        
+        Args:
+            state_type: 状态类型（如"天干长生"）
+            state_value: 状态值（如"长生"、"沐浴"等）
+            
+        Returns:
+            str: 要显示的字符
+        """
+        if not state_value:
+            return "?"
+            
+        # 十二长生的特殊显示规则
+        if state_type in ["天干长生", "天干长生_2"]:
+            changsheng_map = {
+                "长生": "生",
+                "沐浴": "沐", 
+                "冠带": "冠",
+                "临官": "官",
+                "帝旺": "旺"
+            }
+            return changsheng_map.get(state_value, state_value[0])
+        
+        # 其他状态使用第一个字符
+        return state_value[0]
         
     def _show_context_menu(self, position):
         """

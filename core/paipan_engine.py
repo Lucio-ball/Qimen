@@ -36,6 +36,17 @@ class PaiPanEngine:
             raise Exception(f"错误: 数据文件 '{full_path}' 未找到。")
         except json.JSONDecodeError:
             raise Exception(f"错误: 数据文件 '{full_path}' 格式不正确。")
+            
+        # 加载旺衰规则数据 (FEAT-20250901-024)
+        self.parameter_states_data = None
+        try:
+            states_file_path = get_resource_path('data/data.json')
+            with open(states_file_path, 'r', encoding='utf-8') as f:
+                states_data = json.load(f)
+                self.parameter_states_data = states_data.get('parameterStates', {})
+        except (FileNotFoundError, json.JSONDecodeError):
+            # 如果旺衰规则数据不存在，记录警告但不中断程序
+            print("警告: 旺衰规则数据文件 'data/data.json' 未找到或格式错误，旺衰分析功能不可用。")
 
     def paipan(self, time_str: str) -> ChartResult:
         """
@@ -127,16 +138,19 @@ class PaiPanEngine:
             palace.original_star = palace.di_pan_star
             palace.original_gate = palace.di_pan_gate
 
-        # 步骤 11: 计算宫侧方自动标注
+        # 步骤 11: 分析旺衰状态 (FEAT-20250901-024)
+        self._analyze_parameter_states(result.palaces)
+        
+        # 步骤 12: 计算宫侧方自动标注
         result.side_annotations = self._calculate_annotations(result, di_pan_stems, tian_pan_stems)
         
-        # 步骤 12: 分析马星冲动
+        # 步骤 13: 分析马星冲动
         result.maxing_chongdong_targets = self._analyze_maxing_chongdong(result)
         
-        # 步骤 13: 构建反向查询索引
+        # 步骤 14: 构建反向查询索引
         result.index = result._build_index()
         
-        # 步骤 14: 分析特殊参数（四柱、年命）的盘面定位
+        # 步骤 15: 分析特殊参数（四柱、年命）的盘面定位
         result.special_params = self._analyze_special_params(result)
 
         return result
@@ -761,3 +775,105 @@ class PaiPanEngine:
         else:
             # 如果没有设置年命，返回年柱作为默认值
             return chart_result.si_zhu['年'][:2]  # 取年干支，去掉"年"字
+
+    def _analyze_parameter_states(self, palaces: List[Palace]) -> None:
+        """
+        分析宫位参数的旺衰状态 (FEAT-20250901-024)
+        
+        遍历所有宫位的参数，查询其旺衰状态，并将结果存入Palace.analysis字典中。
+        
+        调整规则：
+        - 地盘星和地盘门不显示参数状态标注
+        - 四个角落宫（2、4、6、8宫）的天干可能同时有两个十二态，需要分别处理
+        
+        Args:
+            palaces: 九宫格列表（索引1-9有效，索引0未使用）
+        """
+        if not self.parameter_states_data:
+            # 如果没有加载旺衰规则数据，则跳过分析
+            return
+            
+        for palace in palaces[1:10]:  # 遍历索引1-9的宫位
+            palace_index = str(palace.index)  # 宫位索引转为字符串用于查询
+            
+            # 初始化analysis字典
+            palace.analysis = {}
+            
+            # 1. 分析天盘干（支持双状态）
+            for gan in palace.tian_pan_stems:
+                state = self._get_parameter_state('tianGanChangSheng', gan, palace_index)
+                if state:
+                    # 处理单个状态或多个状态
+                    if isinstance(state, list):
+                        # 多个状态：为每个状态创建独立的条目
+                        for i, single_state in enumerate(state):
+                            key_suffix = f"_{i+1}" if i > 0 else ""  # 第一个不加后缀，第二个加_2
+                            palace.analysis[f"天干长生_{gan}{key_suffix}"] = single_state
+                    else:
+                        # 单个状态
+                        palace.analysis[f"天干长生_{gan}"] = state
+            
+            # 2. 分析地盘干（支持双状态）
+            for gan in palace.di_pan_stems:
+                state = self._get_parameter_state('tianGanChangSheng', gan, palace_index)
+                if state:
+                    # 处理单个状态或多个状态
+                    if isinstance(state, list):
+                        # 多个状态：为每个状态创建独立的条目
+                        for i, single_state in enumerate(state):
+                            key_suffix = f"_{i+1}" if i > 0 else ""  # 第一个不加后缀，第二个加_2
+                            palace.analysis[f"天干长生_{gan}{key_suffix}"] = single_state
+                    else:
+                        # 单个状态
+                        palace.analysis[f"天干长生_{gan}"] = state
+            
+            # 3. 分析天盘门（只有非地盘门才显示标注）
+            for gate in palace.tian_pan_gates:
+                # 如果该门不是地盘门，才进行分析
+                if gate != palace.di_pan_gate:
+                    # 转换门名称：从"伤"到"伤门"
+                    full_gate_name = gate + "门" if not gate.endswith("门") else gate
+                    state = self._get_parameter_state('baMenWangXiang', full_gate_name, palace_index)
+                    if state:
+                        palace.analysis[f"八门旺相_{gate}"] = state
+                    
+            # 注意：地盘门不再分析参数状态（按照新需求）
+            
+            # 4. 分析天盘星（只有非地盘星才显示标注）
+            for star in palace.tian_pan_stars:
+                # 如果该星不是地盘星，才进行分析
+                if star != palace.di_pan_star:
+                    # 转换星名称：从"英"到"天英星"
+                    full_star_name = f"天{star}星" if not star.startswith("天") else star
+                    if not full_star_name.endswith("星"):
+                        full_star_name += "星"
+                    state = self._get_parameter_state('jiuXingWangXiang', full_star_name, palace_index)
+                    if state:
+                        palace.analysis[f"九星旺相_{star}"] = state
+                    
+            # 注意：地盘星不再分析参数状态（按照新需求）
+            
+            # 5. 分析八神
+            if palace.zhi_fu:
+                state = self._get_parameter_state('baShenWangXiang', palace.zhi_fu, palace_index)
+                if state:
+                    palace.analysis[f"八神旺相_{palace.zhi_fu}"] = state
+
+    def _get_parameter_state(self, category: str, parameter: str, palace_index: str):
+        """
+        安全地查询参数在指定宫位的旺衰状态
+        
+        Args:
+            category: 参数类别 (tianGanChangSheng, baMenWangXiang, jiuXingWangXiang, baShenWangXiang)
+            parameter: 参数名称 (如"甲", "休门", "天蓬星", "直符")
+            palace_index: 宫位索引字符串 ("1"-"9")
+            
+        Returns:
+            Union[str, List[str], None]: 旺衰状态，可能是字符串、字符串列表或None
+        """
+        try:
+            category_data = self.parameter_states_data.get(category, {})
+            parameter_data = category_data.get(parameter, {})
+            return parameter_data.get(palace_index, None)
+        except (KeyError, TypeError):
+            return None

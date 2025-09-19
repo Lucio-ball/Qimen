@@ -221,6 +221,43 @@ class ChartDisplayPage(QWidget):
         
         layout.addWidget(visibility_group)
         
+        # 参数状态角标显示组（新增）
+        parameter_states_group = QGroupBox("参数状态角标")
+        parameter_states_layout = QVBoxLayout(parameter_states_group)
+        
+        # 总开关
+        self.show_parameter_states_cb = QCheckBox("启用参数状态角标显示")
+        self.show_parameter_states_cb.setToolTip("在参数右下角显示旺衰状态的角标")
+        self.show_parameter_states_cb.toggled.connect(self._on_config_changed)
+        parameter_states_layout.addWidget(self.show_parameter_states_cb)
+        
+        # 具体状态类型控制
+        states_grid = QGridLayout()
+        
+        self.show_tiangan_changsheng_cb = QCheckBox("显示天干长生状态")
+        self.show_tiangan_changsheng_cb.setToolTip("显示天干的长生、沐浴、冠带等状态")
+        self.show_tiangan_changsheng_cb.toggled.connect(self._on_config_changed)
+        states_grid.addWidget(self.show_tiangan_changsheng_cb, 0, 0)
+        
+        self.show_bamen_wangxiang_cb = QCheckBox("显示八门旺相状态")
+        self.show_bamen_wangxiang_cb.setToolTip("显示八门的旺、相、休、囚、死状态")
+        self.show_bamen_wangxiang_cb.toggled.connect(self._on_config_changed)
+        states_grid.addWidget(self.show_bamen_wangxiang_cb, 0, 1)
+        
+        self.show_jiuxing_wangxiang_cb = QCheckBox("显示九星旺相状态")
+        self.show_jiuxing_wangxiang_cb.setToolTip("显示九星的旺、相、休、囚、死状态")
+        self.show_jiuxing_wangxiang_cb.toggled.connect(self._on_config_changed)
+        states_grid.addWidget(self.show_jiuxing_wangxiang_cb, 1, 0)
+        
+        self.show_bashen_wangxiang_cb = QCheckBox("显示八神旺相状态")
+        self.show_bashen_wangxiang_cb.setToolTip("显示八神的旺、相、休、囚、死状态")
+        self.show_bashen_wangxiang_cb.toggled.connect(self._on_config_changed)
+        states_grid.addWidget(self.show_bashen_wangxiang_cb, 1, 1)
+        
+        parameter_states_layout.addLayout(states_grid)
+        
+        layout.addWidget(parameter_states_group)
+        
         # 五行颜色自定义组 (新增)
         colors_group = QGroupBox("五行颜色自定义")
         colors_layout = QGridLayout(colors_group)
@@ -281,6 +318,11 @@ class ChartDisplayPage(QWidget):
             show_yue_ling=self.show_yue_ling_cb.isChecked(),
             show_di_pan_gate=self.show_di_pan_gate_cb.isChecked(),
             show_di_pan_star=self.show_di_pan_star_cb.isChecked(),
+            show_parameter_states=self.show_parameter_states_cb.isChecked(),  # 新增
+            show_tiangan_changsheng=self.show_tiangan_changsheng_cb.isChecked(),  # 新增
+            show_bamen_wangxiang=self.show_bamen_wangxiang_cb.isChecked(),  # 新增
+            show_jiuxing_wangxiang=self.show_jiuxing_wangxiang_cb.isChecked(),  # 新增
+            show_bashen_wangxiang=self.show_bashen_wangxiang_cb.isChecked(),  # 新增
             wuxing_colors=self.current_config.wuxing_colors,  # 新增：保持当前的颜色配置
             annotation_background_alpha=self.current_config.annotation_background_alpha,
             selected_border_width=self.current_config.selected_border_width,
@@ -347,6 +389,13 @@ class ChartDisplayPage(QWidget):
         self.show_yue_ling_cb.setChecked(config.show_yue_ling)
         self.show_di_pan_gate_cb.setChecked(config.show_di_pan_gate)
         self.show_di_pan_star_cb.setChecked(config.show_di_pan_star)
+        
+        # 参数状态角标设置（新增）
+        self.show_parameter_states_cb.setChecked(config.show_parameter_states)
+        self.show_tiangan_changsheng_cb.setChecked(config.show_tiangan_changsheng)
+        self.show_bamen_wangxiang_cb.setChecked(config.show_bamen_wangxiang)
+        self.show_jiuxing_wangxiang_cb.setChecked(config.show_jiuxing_wangxiang)
+        self.show_bashen_wangxiang_cb.setChecked(config.show_bashen_wangxiang)
         
         # 五行颜色设置 (新增)
         self._update_all_color_previews()
@@ -724,7 +773,7 @@ class AboutPage(QWidget):
         layout.addWidget(app_name_label)
         
         # 版本号
-        version_label = QLabel("版本 v1.0.0")
+        version_label = QLabel("版本 v1.1")
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
         

@@ -7,12 +7,12 @@
 import os
 import sys
 
-# 获取项目根目录
-project_root = os.path.dirname(os.path.abspath(SPEC))
+# 获取项目根目录 - 硬编码路径以避免路径问题
+project_root = r'C:\Users\Crazy\OneDrive\github\Qimen'
 
 # 分析主脚本
 a = Analysis(
-    ['run_gui.py'],  # 主入口文件
+    [os.path.join(project_root, 'run_gui.py')],  # 主入口文件
     pathex=[
         project_root,  # 项目根目录
         os.path.join(project_root, 'core'),  # 核心模块目录
@@ -21,20 +21,17 @@ a = Analysis(
     binaries=[],
     datas=[
         # 数据文件
-        ('data/core_parameters.json', 'data'),
-        ('data/templates.json', 'data'),
-        
-        # UI样式文件
-        ('ui/assets/styles/dark_theme.qss', 'ui/assets/styles'),
-        
-        # UI视图文件
-        ('ui/views/main_window.ui', 'ui/views'),
+        (os.path.join(project_root, 'data', 'core_parameters.json'), 'data'),
+        (os.path.join(project_root, 'data', 'templates.json'), 'data'),
         
         # 添加整个core包
-        ('core', 'core'),
+        (os.path.join(project_root, 'core'), 'core'),
         
         # 添加整个ui包
-        ('ui', 'ui'),
+        (os.path.join(project_root, 'ui'), 'ui'),
+        
+        # 如果有其他资源文件也需要包含
+        (os.path.join(project_root, 'qimen_cases.db'), '.'),  # 示例数据库文件
     ],
     hiddenimports=[
         # PySide6相关模块

@@ -27,6 +27,13 @@ class DisplayConfig:
     show_di_pan_gate: bool = True  # 显示地盘门
     show_di_pan_star: bool = True  # 显示地盘星
     
+    # 参数状态角标配置（新增）
+    show_parameter_states: bool = True  # 参数状态角标总开关
+    show_tiangan_changsheng: bool = True  # 显示天干长生状态
+    show_bamen_wangxiang: bool = True     # 显示八门旺相状态
+    show_jiuxing_wangxiang: bool = True   # 显示九星旺相状态
+    show_bashen_wangxiang: bool = True    # 显示八神旺相状态
+    
     # 五行颜色自定义配置（新增）
     wuxing_colors: dict[str, str] = field(default_factory=lambda: {
         "金": "#f5aa11",  # 金黄色
@@ -85,3 +92,28 @@ class DisplayConfig:
         
         wuxing = color_map.get(param_name, "土")  # 默认土
         return default_colors.get(wuxing, QColor(0, 0, 0))
+    
+    def get_parameter_state_color(self, state: str) -> QColor:
+        """获取参数状态对应的角标颜色（浅色）"""
+        state_colors = {
+            # 天干长生状态
+            "长生": QColor(46, 125, 50, 100),    # 浅绿色
+            "沐浴": QColor(33, 150, 243, 100),   # 浅蓝色
+            "冠带": QColor(156, 39, 176, 100),   # 浅紫色
+            "临官": QColor(255, 152, 0, 100),    # 浅橙色
+            "帝旺": QColor(244, 67, 54, 100),    # 浅红色
+            "衰": QColor(121, 85, 72, 100),      # 浅棕色
+            "病": QColor(158, 158, 158, 100),    # 浅灰色
+            "死": QColor(96, 125, 139, 100),     # 浅蓝灰色
+            "墓": QColor(55, 71, 79, 100),       # 浅深灰色
+            "绝": QColor(0, 0, 0, 100),          # 浅黑色
+            "胎": QColor(255, 193, 7, 100),      # 浅黄色
+            "养": QColor(76, 175, 80, 100),      # 浅绿色
+            # 八门、九星、八神旺相状态
+            "旺": QColor(244, 67, 54, 120),      # 红色（较深）
+            "相": QColor(255, 152, 0, 120),      # 橙色（较深）
+            "休": QColor(96, 125, 139, 100),     # 蓝灰色
+            "囚": QColor(121, 85, 72, 100),      # 棕色
+            "死": QColor(158, 158, 158, 100),    # 灰色
+        }
+        return state_colors.get(state, QColor(128, 128, 128, 80))  # 默认浅灰色

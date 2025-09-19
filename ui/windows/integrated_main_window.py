@@ -49,7 +49,6 @@ from ui.widgets.chart_widget import ChartWidget
 from ui.widgets.welcome_widget import WelcomeWidget
 from ui.dialogs.query_dialog import QueryDialog
 
-
 class IntegratedMainWindow(QMainWindow):
     """
     集成主窗口类 - 多案例工作台版本
@@ -522,6 +521,9 @@ class IntegratedMainWindow(QMainWindow):
                         if hasattr(widget, 'update_config') and widget != getattr(self, 'welcome_widget', None):
                             widget.update_config(config)
 
+                # 刷新当前图表的标注显示
+                self._refresh_current_chart_annotations()
+
                 self.status_bar.showMessage("显示配置已更新")
             
         except Exception as e:
@@ -534,12 +536,13 @@ class IntegratedMainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "关于",
-            "<h3>奇门遁甲工作台 v1.0 alpha</h3>"
-            "<p>版本：v1.0 alpha (RELEASE-20250901-021)</p>"
+            "<h3>奇门遁甲工作台 v1.1</h3>"
+            "<p>版本：v1.1 (RELEASE-20250919-001)</p>"
             "<p>一个专为奇门遁甲专业人士和深度爱好者设计的专业级桌面分析平台</p>"
             "<p>• 多案例管理与文件式工作区</p>"
             "<p>• 高度可定制的盘面显示系统</p>"
             "<p>• 自动化用神标注模板</p>"
+            "<p>• 参数状态角标显示功能</p>"
             "<p>版权所有 © Lucio-ball 2025</p>"
         )
         
@@ -1233,8 +1236,7 @@ class IntegratedMainWindow(QMainWindow):
             
             # 应用数据配置（工作区路径等）
             self._apply_data_config(data_config)
-            
-            
+
         except Exception as e:
             pass
     
@@ -1298,7 +1300,6 @@ class IntegratedMainWindow(QMainWindow):
         except Exception as e:
             pass
 
-
 def main():
     """主函数，用于独立测试"""
     app = QApplication(sys.argv)
@@ -1307,7 +1308,6 @@ def main():
     window.show()
     
     sys.exit(app.exec())
-
 
 if __name__ == "__main__":
     main()

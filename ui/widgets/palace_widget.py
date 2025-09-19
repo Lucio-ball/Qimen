@@ -78,6 +78,54 @@ class PalaceWidget(QWidget):
         }
         self._config = None  # 保存当前的DisplayConfig引用
         
+    def _get_parameter_analysis_data(self, palace_data: Palace, param_type: str, param_value: str) -> dict:
+        """
+        从Palace.analysis中提取指定参数的状态分析数据
+        
+        Args:
+            palace_data: 宫位数据对象
+            param_type: 参数类型 (如 "tianGan", "baMen", "jiuXing", "baShen")  
+            param_value: 参数值 (如 "甲", "休门", "天蓬", "值符")
+            
+        Returns:
+            dict: 参数状态分析数据，例如 {"天干长生": "帝旺", "八门旺相": "旺"}
+                  对于天干长生，如果有多个状态，会返回 {"天干长生": "帝旺", "天干长生_2": "衰"}
+        """
+        if not palace_data.analysis:
+            return {}
+            
+        analysis_data = {}
+        
+        # 映射参数类型到分析键
+        type_mapping = {
+            "tianGan": ["天干长生"],  # 天干需要查长生状态
+            "baMen": ["八门旺相"],    # 八门需要查旺相状态
+            "jiuXing": ["九星旺相"],  # 九星需要查旺相状态  
+            "baShen": ["八神旺相"]    # 八神需要查旺相状态
+        }
+        
+        if param_type in type_mapping:
+            for analysis_key in type_mapping[param_type]:
+                # 构建完整的分析键，格式: "天干长生_甲" 
+                full_key = f"{analysis_key}_{param_value}"
+                
+                # 特殊处理天干长生：检查是否有多个状态
+                if analysis_key == "天干长生":
+                    # 先查找主状态
+                    if full_key in palace_data.analysis:
+                        analysis_data[analysis_key] = palace_data.analysis[full_key]
+                    
+                    # 再查找第二个状态（如果存在）
+                    full_key_2 = f"{full_key}_2"
+                    if full_key_2 in palace_data.analysis:
+                        analysis_data[f"{analysis_key}_2"] = palace_data.analysis[full_key_2]
+                else:
+                    # 其他参数类型保持原有逻辑
+                    if full_key in palace_data.analysis:
+                        analysis_data[analysis_key] = palace_data.analysis[full_key]
+                    
+        return analysis_data
+        
     def update_data(self, palace_data: Palace, chart_data: ChartResult, 
                     config: DisplayConfig, global_data: dict):
         """
@@ -114,7 +162,7 @@ class PalaceWidget(QWidget):
             config: DisplayConfig对象
         """
         for widget in self.param_widgets.values():
-            widget.set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary")
+            widget.set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary", {})
             
     def _update_center_palace(self, palace_data: Palace, chart_data: ChartResult,
                              config: DisplayConfig, global_data: dict):
@@ -137,20 +185,21 @@ class PalaceWidget(QWidget):
                 ju_shu_text = f"{chart_data.ju_shu_info.get('遁', '')}{chart_data.ju_shu_info.get('局', '')}局"
                 tu_color = self.wuxing_colors["土"]  # 土行颜色
                 # 不设置参数ID，使其无法右键操作
-                self.param_widgets[5].set_data(ju_shu_text, config, tu_color, False, "", None, None, "primary")
+                self.param_widgets[5].set_data(ju_shu_text, config, tu_color, False, "", None, None, "primary", {})
             elif i == 9:
                 # 格子9：显示中宫地盘干（中宫特有，不可操作）
                 if palace_data.di_pan_stems:
                     earth_stem = palace_data.di_pan_stems[0]
                     color = self._get_wuxing_color("tianGan", earth_stem)
+                    analysis_data = self._get_parameter_analysis_data(palace_data, "tianGan", earth_stem)
                     # 不设置参数ID，使其无法右键操作
-                    self.param_widgets[9].set_data(earth_stem, config, color, False, "", None, None, "primary")
+                    self.param_widgets[9].set_data(earth_stem, config, color, False, "", None, None, "primary", analysis_data)
                 else:
                     # 没有地盘干时，设置空的不可操作格子
-                    self.param_widgets[9].set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary")
+                    self.param_widgets[9].set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary", {})
             else:
                 # 其他格子设置为空的且不可操作
-                self.param_widgets[i].set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary")
+                self.param_widgets[i].set_data("", config, QColor(0, 0, 0), False, "", None, None, "primary", {})
             
     def _update_normal_palace(self, palace_data: Palace, chart_data: ChartResult,
                              config: DisplayConfig, global_data: dict):
@@ -182,28 +231,32 @@ class PalaceWidget(QWidget):
             color = self._get_wuxing_color("baMen", palace_data.di_pan_gate)
             display_text = self._get_full_name("baMen", palace_data.di_pan_gate)
             param_id = f"palace_{palace_data.index}_di_pan_gate"
-            self.param_widgets[1].set_data(display_text, config, color, False, param_id, None, None, "secondary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "baMen", palace_data.di_pan_gate)
+            self.param_widgets[1].set_data(display_text, config, color, False, param_id, None, None, "secondary", analysis_data)
         
         # 格子2：八神（上中）- 主要样式
         if palace_data.zhi_fu:
             color = self._get_wuxing_color("baShen", palace_data.zhi_fu)
             display_text = self._get_full_name("baShen", palace_data.zhi_fu)
             param_id = f"palace_{palace_data.index}_zhi_fu"
-            self.param_widgets[2].set_data(display_text, config, color, False, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "baShen", palace_data.zhi_fu)
+            self.param_widgets[2].set_data(display_text, config, color, False, param_id, None, None, "primary", analysis_data)
         
         # 格子3：地盘星（右上角）- 次要样式
         if palace_data.di_pan_star and config.show_di_pan_star:
             color = self._get_wuxing_color("jiuXing", palace_data.di_pan_star)
             display_text = self._get_full_name("jiuXing", palace_data.di_pan_star)
             param_id = f"palace_{palace_data.index}_di_pan_star"
-            self.param_widgets[3].set_data(display_text, config, color, False, param_id, None, None, "secondary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "jiuXing", palace_data.di_pan_star)
+            self.param_widgets[3].set_data(display_text, config, color, False, param_id, None, None, "secondary", analysis_data)
         
         # 格子4：天禽/中寄天盘干（左中）- 主要样式
         if len(palace_data.tian_pan_stems) > 1:
             stem = palace_data.tian_pan_stems[1]  # 第二个天盘干
             color = self._get_wuxing_color("tianGan", stem)
             param_id = f"palace_{palace_data.index}_tian_pan_stem_1"
-            self.param_widgets[4].set_data(stem, config, color, False, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "tianGan", stem)
+            self.param_widgets[4].set_data(stem, config, color, False, param_id, None, None, "primary", analysis_data)
         
         # 格子5：天盘星（正中）- 主要样式
         if palace_data.tian_pan_stars:
@@ -221,21 +274,25 @@ class PalaceWidget(QWidget):
             color = self._get_wuxing_color("jiuXing", palace_data.tian_pan_stars[0])
             is_bold = chart_data.zhi_fu in palace_data.tian_pan_stars  # 检查是否包含值符星
             param_id = f"palace_{palace_data.index}_tian_pan_star_0"
-            self.param_widgets[5].set_data(star_text, config, color, is_bold, param_id, None, dual_stars, "primary")
+            # 对于双星，我们使用第一个星的分析数据
+            analysis_data = self._get_parameter_analysis_data(palace_data, "jiuXing", palace_data.tian_pan_stars[0])
+            self.param_widgets[5].set_data(star_text, config, color, is_bold, param_id, None, dual_stars, "primary", analysis_data)
         
         # 格子6：天盘干（右中）- 主要样式
         if palace_data.tian_pan_stems:
             stem = palace_data.tian_pan_stems[0]  # 主要天盘干
             color = self._get_wuxing_color("tianGan", stem)
             param_id = f"palace_{palace_data.index}_tian_pan_stem_0"
-            self.param_widgets[6].set_data(stem, config, color, False, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "tianGan", stem)
+            self.param_widgets[6].set_data(stem, config, color, False, param_id, None, None, "primary", analysis_data)
         
         # 格子7：中寄地盘干（左下）- 主要样式
         if len(palace_data.di_pan_stems) > 1:
             stem = palace_data.di_pan_stems[1]  # 第二个地盘干
             color = self._get_wuxing_color("tianGan", stem)
             param_id = f"palace_{palace_data.index}_di_pan_stem_1"
-            self.param_widgets[7].set_data(stem, config, color, False, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "tianGan", stem)
+            self.param_widgets[7].set_data(stem, config, color, False, param_id, None, None, "primary", analysis_data)
         
         # 格子8：天盘门（下中）- 主要样式
         if palace_data.tian_pan_gates:
@@ -244,14 +301,16 @@ class PalaceWidget(QWidget):
             is_bold = gate == chart_data.zhi_shi  # 检查是否为值使门
             display_text = self._get_full_name("baMen", gate)
             param_id = f"palace_{palace_data.index}_tian_pan_gate_0"
-            self.param_widgets[8].set_data(display_text, config, color, is_bold, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "baMen", gate)
+            self.param_widgets[8].set_data(display_text, config, color, is_bold, param_id, None, None, "primary", analysis_data)
         
         # 格子9：地盘干（右下）- 主要样式
         if palace_data.di_pan_stems:
             stem = palace_data.di_pan_stems[0]  # 主要地盘干
             color = self._get_wuxing_color("tianGan", stem)
             param_id = f"palace_{palace_data.index}_di_pan_stem_0"
-            self.param_widgets[9].set_data(stem, config, color, False, param_id, None, None, "primary")
+            analysis_data = self._get_parameter_analysis_data(palace_data, "tianGan", stem)
+            self.param_widgets[9].set_data(stem, config, color, False, param_id, None, None, "primary", analysis_data)
         
     def _get_full_name(self, param_type: str, param_name: str) -> str:
         """

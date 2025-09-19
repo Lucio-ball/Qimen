@@ -125,6 +125,37 @@ class ConfigManager:
                 type=bool
             )
             
+            # 参数状态角标配置（新增）
+            show_parameter_states = self.settings.value(
+                "display/show_parameter_states", 
+                default_config.show_parameter_states, 
+                type=bool
+            )
+            
+            show_tiangan_changsheng = self.settings.value(
+                "display/show_tiangan_changsheng", 
+                default_config.show_tiangan_changsheng, 
+                type=bool
+            )
+            
+            show_bamen_wangxiang = self.settings.value(
+                "display/show_bamen_wangxiang", 
+                default_config.show_bamen_wangxiang, 
+                type=bool
+            )
+            
+            show_jiuxing_wangxiang = self.settings.value(
+                "display/show_jiuxing_wangxiang", 
+                default_config.show_jiuxing_wangxiang, 
+                type=bool
+            )
+            
+            show_bashen_wangxiang = self.settings.value(
+                "display/show_bashen_wangxiang", 
+                default_config.show_bashen_wangxiang, 
+                type=bool
+            )
+            
             # 数值配置
             annotation_background_alpha = self.settings.value(
                 "display/annotation_background_alpha", 
@@ -172,6 +203,11 @@ class ConfigManager:
                 show_yue_ling=show_yue_ling,
                 show_di_pan_gate=show_di_pan_gate,
                 show_di_pan_star=show_di_pan_star,
+                show_parameter_states=show_parameter_states,  # 新增
+                show_tiangan_changsheng=show_tiangan_changsheng,  # 新增
+                show_bamen_wangxiang=show_bamen_wangxiang,  # 新增
+                show_jiuxing_wangxiang=show_jiuxing_wangxiang,  # 新增
+                show_bashen_wangxiang=show_bashen_wangxiang,  # 新增
                 wuxing_colors=wuxing_colors,  # 新增
                 annotation_background_alpha=annotation_background_alpha,
                 selected_border_width=selected_border_width,
@@ -224,6 +260,13 @@ class ConfigManager:
             self.settings.setValue("display/show_yue_ling", config.show_yue_ling)
             self.settings.setValue("display/show_di_pan_gate", config.show_di_pan_gate)
             self.settings.setValue("display/show_di_pan_star", config.show_di_pan_star)
+            
+            # 参数状态角标配置（新增）
+            self.settings.setValue("display/show_parameter_states", config.show_parameter_states)
+            self.settings.setValue("display/show_tiangan_changsheng", config.show_tiangan_changsheng)
+            self.settings.setValue("display/show_bamen_wangxiang", config.show_bamen_wangxiang)
+            self.settings.setValue("display/show_jiuxing_wangxiang", config.show_jiuxing_wangxiang)
+            self.settings.setValue("display/show_bashen_wangxiang", config.show_bashen_wangxiang)
             
             # 数值配置
             self.settings.setValue("display/annotation_background_alpha", config.annotation_background_alpha)

@@ -74,21 +74,7 @@ class AnnotationDialog(QDialog):
         text_layout.addWidget(self.text_edit)
         add_layout.addLayout(text_layout)
         
-        # 形状和颜色选择
-        style_layout = QHBoxLayout()
-        style_layout.addWidget(QLabel("形状:"))
-        self.shape_combo = QComboBox()
-        self.shape_combo.addItems(["circle", "square", "triangle"])
-        style_layout.addWidget(self.shape_combo)
-        
-        style_layout.addWidget(QLabel("颜色:"))
-        self.color_button = QPushButton()
-        self.color_button.setMaximumSize(30, 25)
-        self.color_button.setStyleSheet("background-color: #FF0000;")
-        self.current_color = "#FF0000"
-        style_layout.addWidget(self.color_button)
-        style_layout.addStretch()
-        add_layout.addLayout(style_layout)
+        # 不再提供形状和颜色选择，使用默认值
         
         # 添加按钮
         self.add_button = QPushButton("添加标注")
@@ -113,7 +99,6 @@ class AnnotationDialog(QDialog):
         self.delete_button.clicked.connect(self._delete_selected)
         self.move_up_button.clicked.connect(self._move_up)
         self.move_down_button.clicked.connect(self._move_down)
-        self.color_button.clicked.connect(self._choose_color)
         self.add_button.clicked.connect(self._add_annotation)
         self.ok_button.clicked.connect(self._save_and_close)
         self.cancel_button.clicked.connect(self.reject)
@@ -211,13 +196,6 @@ class AnnotationDialog(QDialog):
             self._load_annotations()
             self.annotation_list.setCurrentRow(current_row + 1)
             
-    def _choose_color(self):
-        """选择颜色"""
-        color = QColorDialog.getColor(QColor(self.current_color), self)
-        if color.isValid():
-            self.current_color = color.name()
-            self.color_button.setStyleSheet(f"background-color: {self.current_color};")
-            
     def _add_annotation(self):
         """添加新标注"""
         text = self.text_edit.text().strip()
@@ -231,11 +209,11 @@ class AnnotationDialog(QDialog):
                 QMessageBox.warning(self, "警告", f"标注 '{text}' 已存在！")
                 return
                 
-        # 添加新标注
+        # 添加新标注（使用默认形状和颜色）
         new_annotation = {
             "text": text,
-            "shape": self.shape_combo.currentText(),
-            "color": self.current_color
+            "shape": "circle",  # 固定使用圆形
+            "color": "#FF0000"  # 固定使用红色
         }
         
         self.annotations.append(new_annotation)

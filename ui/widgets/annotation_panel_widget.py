@@ -3,7 +3,7 @@
 """
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem, 
                                QPushButton, QHBoxLayout, QFrame, QSizePolicy,
-                               QComboBox, QLineEdit, QColorDialog, QMenu, QLabel,
+                               QComboBox, QLineEdit, QMenu, QLabel,
                                QGroupBox, QCheckBox, QInputDialog, QMessageBox,
                                QSplitter, QTabWidget)
 from PySide6.QtCore import Signal, Qt
@@ -298,24 +298,7 @@ class AnnotationPanelWidget(QWidget):
         text_layout.addWidget(self.text_edit)
         edit_layout.addLayout(text_layout)
         
-        # 形状选择
-        shape_layout = QHBoxLayout()
-        shape_layout.addWidget(QLabel("形状:"))
-        self.shape_combo = QComboBox()
-        self.shape_combo.addItems(["circle", "square", "triangle"])
-        shape_layout.addWidget(self.shape_combo)
-        edit_layout.addLayout(shape_layout)
-        
-        # 颜色选择
-        color_layout = QHBoxLayout()
-        color_layout.addWidget(QLabel("颜色:"))
-        self.color_button = QPushButton()
-        self.color_button.setMaximumSize(30, 25)
-        self.color_button.setStyleSheet("background-color: #FF0000;")
-        self.current_color = "#FF0000"
-        color_layout.addWidget(self.color_button)
-        color_layout.addStretch()
-        edit_layout.addLayout(color_layout)
+        # 不再提供形状和颜色选择（已简化）
         
         # 操作按钮
         button_layout = QHBoxLayout()
@@ -421,7 +404,6 @@ class AnnotationPanelWidget(QWidget):
         self.annotation_list.itemSelectionChanged.connect(self._on_selection_changed)
         self.annotation_list.customContextMenuRequested.connect(self._show_context_menu)
         self.annotation_list.itemDoubleClicked.connect(self._on_double_click)
-        self.color_button.clicked.connect(self._choose_color)
         self.update_button.clicked.connect(self._update_annotation)
         self.delete_button.clicked.connect(self._delete_annotation)
         self.clear_all_button.clicked.connect(self._clear_all_annotations)
@@ -881,16 +863,6 @@ class AnnotationPanelWidget(QWidget):
                 first_annotation = annotations[0]
                 self.text_edit.setText(f"共{len(annotations)}个标注: {first_annotation.get('text', '')}")
                 self.text_edit.setEnabled(False)  # 只读
-                
-                shape = first_annotation.get('shape', 'circle')
-                index = self.shape_combo.findText(shape)
-                if index >= 0:
-                    self.shape_combo.setCurrentIndex(index)
-                self.shape_combo.setEnabled(False)  # 只读
-                    
-                color = first_annotation.get('color', '#FF0000')
-                self._set_color(color)
-                self.color_button.setEnabled(False)  # 只读
             
             # 发射选择信号
             self.annotation_selected.emit(current_item.param_id)
@@ -898,22 +870,7 @@ class AnnotationPanelWidget(QWidget):
             # 清空编辑区域
             self.text_edit.clear()
             self.text_edit.setEnabled(True)
-            self.shape_combo.setCurrentIndex(0)
-            self.shape_combo.setEnabled(True)
-            self.color_button.setEnabled(True)
-            self._set_color("#FF0000")
             
-    def _choose_color(self):
-        """选择颜色"""
-        color = QColorDialog.getColor(QColor(self.current_color), self)
-        if color.isValid():
-            self._set_color(color.name())
-            
-    def _set_color(self, color: str):
-        """设置颜色"""
-        self.current_color = color
-        self.color_button.setStyleSheet(f"background-color: {color};")
-        
     def _update_annotation(self):
         """更新当前标注（现在使用对话框）"""
         # 现在使用双击或右键菜单来编辑，这个方法不再使用
