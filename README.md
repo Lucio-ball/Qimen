@@ -1,8 +1,8 @@
-# 奇门遁甲工作台 v1.1
+# 奇门遁甲工作台 v1.2
 
 一款专为奇门遁甲专业人士和深度爱好者设计的、专业级、可高度定制的桌面分析平台。
 
-![版本](https://img.shields.io/badge/版本-v1.1-blue)
+![版本](https://img.shields.io/badge/版本-v1.2-blue)
 ![平台](https://img.shields.io/badge/平台-Windows-lightgrey)
 ![许可证](https://img.shields.io/badge/许可证-MIT-green)
 
