@@ -23,6 +23,7 @@ a = Analysis(
         # 数据文件
         (os.path.join(project_root, 'data', 'core_parameters.json'), 'data'),
         (os.path.join(project_root, 'data', 'templates.json'), 'data'),
+        (os.path.join(project_root, 'data', 'data.json'), 'data'),  # 参数状态数据文件
         
         # 添加整个core包
         (os.path.join(project_root, 'core'), 'core'),
