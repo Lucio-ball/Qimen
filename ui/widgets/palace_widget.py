@@ -78,7 +78,7 @@ class PalaceWidget(QWidget):
         }
         self._config = None  # 保存当前的DisplayConfig引用
         
-    def _get_parameter_analysis_data(self, palace_data: Palace, param_type: str, param_value: str) -> dict:
+    def _get_parameter_analysis_data(self, palace_data: Palace, param_type: str, param_value: str, is_tianpan: bool = True) -> dict:
         """
         从Palace.analysis中提取指定参数的状态分析数据
         
@@ -86,12 +86,18 @@ class PalaceWidget(QWidget):
             palace_data: 宫位数据对象
             param_type: 参数类型 (如 "tianGan", "baMen", "jiuXing", "baShen")  
             param_value: 参数值 (如 "甲", "休门", "天蓬", "值符")
+            is_tianpan: 是否为天盘参数，如果为False（地盘参数），则不返回旺衰分析数据
             
         Returns:
             dict: 参数状态分析数据，例如 {"天干长生": "帝旺", "八门旺相": "旺"}
                   对于天干长生，如果有多个状态，会返回 {"天干长生": "帝旺", "天干长生_2": "衰"}
+                  如果is_tianpan为False且参数类型为八门或九星，则返回空字典
         """
         if not palace_data.analysis:
+            return {}
+            
+        # 地盘的八门和九星不显示旺衰状态
+        if not is_tianpan and param_type in ["baMen", "jiuXing"]:
             return {}
             
         analysis_data = {}
@@ -231,7 +237,7 @@ class PalaceWidget(QWidget):
             color = self._get_wuxing_color("baMen", palace_data.di_pan_gate)
             display_text = self._get_full_name("baMen", palace_data.di_pan_gate)
             param_id = f"palace_{palace_data.index}_di_pan_gate"
-            analysis_data = self._get_parameter_analysis_data(palace_data, "baMen", palace_data.di_pan_gate)
+            analysis_data = self._get_parameter_analysis_data(palace_data, "baMen", palace_data.di_pan_gate, is_tianpan=False)
             self.param_widgets[1].set_data(display_text, config, color, False, param_id, None, None, "secondary", analysis_data)
         
         # 格子2：八神（上中）- 主要样式
@@ -247,7 +253,7 @@ class PalaceWidget(QWidget):
             color = self._get_wuxing_color("jiuXing", palace_data.di_pan_star)
             display_text = self._get_full_name("jiuXing", palace_data.di_pan_star)
             param_id = f"palace_{palace_data.index}_di_pan_star"
-            analysis_data = self._get_parameter_analysis_data(palace_data, "jiuXing", palace_data.di_pan_star)
+            analysis_data = self._get_parameter_analysis_data(palace_data, "jiuXing", palace_data.di_pan_star, is_tianpan=False)
             self.param_widgets[3].set_data(display_text, config, color, False, param_id, None, None, "secondary", analysis_data)
         
         # 格子4：天禽/中寄天盘干（左中）- 主要样式

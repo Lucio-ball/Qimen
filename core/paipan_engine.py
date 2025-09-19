@@ -827,31 +827,27 @@ class PaiPanEngine:
                         # 单个状态
                         palace.analysis[f"天干长生_{gan}"] = state
             
-            # 3. 分析天盘门（只有非地盘门才显示标注）
+            # 3. 分析天盘门的旺衰状态
             for gate in palace.tian_pan_gates:
-                # 如果该门不是地盘门，才进行分析
-                if gate != palace.di_pan_gate:
-                    # 转换门名称：从"伤"到"伤门"
-                    full_gate_name = gate + "门" if not gate.endswith("门") else gate
-                    state = self._get_parameter_state('baMenWangXiang', full_gate_name, palace_index)
-                    if state:
-                        palace.analysis[f"八门旺相_{gate}"] = state
+                # 转换门名称：从"伤"到"伤门"
+                full_gate_name = gate + "门" if not gate.endswith("门") else gate
+                state = self._get_parameter_state('baMenWangXiang', full_gate_name, palace_index)
+                if state:
+                    palace.analysis[f"八门旺相_{gate}"] = state
                     
-            # 注意：地盘门不再分析参数状态（按照新需求）
+            # 注意：不再排除与地盘相同的天盘门，以支持伏吟局的旺衰显示
             
-            # 4. 分析天盘星（只有非地盘星才显示标注）
+            # 4. 分析天盘星的旺衰状态
             for star in palace.tian_pan_stars:
-                # 如果该星不是地盘星，才进行分析
-                if star != palace.di_pan_star:
-                    # 转换星名称：从"英"到"天英星"
-                    full_star_name = f"天{star}星" if not star.startswith("天") else star
-                    if not full_star_name.endswith("星"):
-                        full_star_name += "星"
-                    state = self._get_parameter_state('jiuXingWangXiang', full_star_name, palace_index)
-                    if state:
-                        palace.analysis[f"九星旺相_{star}"] = state
+                # 转换星名称：从"英"到"天英星"
+                full_star_name = f"天{star}星" if not star.startswith("天") else star
+                if not full_star_name.endswith("星"):
+                    full_star_name += "星"
+                state = self._get_parameter_state('jiuXingWangXiang', full_star_name, palace_index)
+                if state:
+                    palace.analysis[f"九星旺相_{star}"] = state
                     
-            # 注意：地盘星不再分析参数状态（按照新需求）
+            # 注意：不再排除与地盘相同的天盘星，以支持伏吟局的旺衰显示
             
             # 5. 分析八神
             if palace.zhi_fu:
