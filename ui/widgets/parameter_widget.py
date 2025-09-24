@@ -572,7 +572,7 @@ class ParameterWidget(QWidget):
             changsheng_map = {
                 "长生": "生",
                 "沐浴": "沐", 
-                "冠带": "冠",
+                "冠带": "带",
                 "临官": "官",
                 "帝旺": "旺"
             }

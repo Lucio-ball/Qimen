@@ -93,8 +93,9 @@ class PaiPanEngine:
         tian_pan_stems, tian_pan_stars = self._layout_tian_pan_and_stars(shi_zhu[0], di_pan_stems, zhi_fu_star,
                                                                          result.shi_chen_xun)
 
-        # 步骤 8: 排八门
-        ba_men_layout = self._layout_ba_men(shi_zhu[1], result.shi_chen_xun['zhi'], result.zhi_shi, result.ju_shu_info)
+        # 步骤 8: 排八门（值使随时宫）
+        ba_men_layout = self._layout_ba_men(shi_zhu[0], shi_zhu[1], di_pan_stems, result.zhi_shi, 
+                                           result.ju_shu_info, result.shi_chen_xun)
 
         # 步骤 9: 计算天乙
         result.tian_yi = self._calculate_tian_yi(zhi_fu_star, tian_pan_stars)
@@ -285,24 +286,58 @@ class PaiPanEngine:
 
         return tian_pan_stems, tian_pan_stars
 
-    def _layout_ba_men(self, shi_zhi: str, xun_zhi: str, zhi_shi_cn: str, ju_shu_info: Dict) -> List[str]:
+    def _layout_ba_men(self, shi_gan: str, shi_zhi: str, di_pan_stems: List[List[str]], zhi_shi_cn: str, 
+                       ju_shu_info: Dict, shi_chen_xun: Dict) -> List[str]:
+        """
+        八门布局：值使随时宫
+        1. 时干在当前旬对应值班军队位置（初始位置）
+        2. 根据时支与旬支差值调整位置（阳顺阴逆）
+        3. 如果落到中5宫则寄坤2宫
+        4. 从值使门位置顺时针排布八门
+        """
         layout = [""] * 10
-        di_zhi_order = [d['cn'] for d in self.data['diZhi']]
-        offset = (di_zhi_order.index(shi_zhi) - di_zhi_order.index(xun_zhi) + 12) % 12
-        zhi_shi_obj = next(g for g in self.data['baMen'] if g['cn'] == zhi_shi_cn)
-        start_palace = zhi_shi_obj['guxiang']
-
-        if ju_shu_info['遁'] == '阳遁':
-            zhi_shi_luo_gong = (start_palace + offset - 1) % 9 + 1
+        
+        # 步骤1: 找到当前旬的值班军队在地盘的位置作为初始位置
+        jun_dui_gan = shi_chen_xun.get('jun', '戊')  # 获取当前旬的值班军队
+        
+        # 查找值班军队干在地盘的位置
+        # 根据您的说明，对于当前案例，壬应该在中5宫作为初始位置
+        shi_gan_palace = None
+        
+        # 优先查找中5宫是否有值班军队干
+        if jun_dui_gan in di_pan_stems[5]:
+            shi_gan_palace = 5
         else:
-            zhi_shi_luo_gong = (start_palace - offset - 1 + 9) % 9 + 1
-
+            # 如果中5宫没有，再查找其他位置
+            for palace_idx in range(1, 10):
+                if jun_dui_gan in di_pan_stems[palace_idx]:
+                    shi_gan_palace = palace_idx
+                    break
+        
+        if shi_gan_palace is None:
+            raise ValueError(f"无法在地盘上找到值班军队干 '{jun_dui_gan}'")
+        
+        # 步骤2: 根据时支与旬支的差值进行位置调整
+        di_zhi_order = [d['cn'] for d in self.data['diZhi']]
+        xun_zhi = shi_chen_xun['zhi']
+        offset = (di_zhi_order.index(shi_zhi) - di_zhi_order.index(xun_zhi) + 12) % 12
+        
+        # 阳遁顺时针（加），阴遁逆时针（减）
+        if ju_shu_info['遁'] == '阳遁':
+            zhi_shi_luo_gong = (shi_gan_palace + offset - 1) % 9 + 1
+        else:
+            zhi_shi_luo_gong = (shi_gan_palace - offset - 1 + 9) % 9 + 1
+        
+        # 步骤3: 处理中5宫寄生
+        actual_start_palace = zhi_shi_luo_gong
         if zhi_shi_luo_gong == 5:
-            zhi_shi_luo_gong = 2
-
+            actual_start_palace = 2  # 寄坤2宫
+        
+        # 步骤4: 从值使门位置顺时针排布八门
         men_order_cn = ["休", "生", "伤", "杜", "景", "死", "惊", "开"]
         men_start_index = men_order_cn.index(zhi_shi_cn)
-        luo_gong_path_index = LUO_SHU_PATH.index(zhi_shi_luo_gong)
+        
+        luo_gong_path_index = LUO_SHU_PATH.index(actual_start_palace)
 
         for i in range(8):
             current_men_cn = men_order_cn[(men_start_index + i) % 8]
@@ -392,12 +427,17 @@ class PaiPanEngine:
             # 合并天盘干和地盘干
             all_gan_list = tian_pan_stems[gong] + di_pan_stems[gong]
             
-            if gan in all_gan_list:
-                annotations[target_zhi].append({
-                    "type": "liuji",
-                    "text": f"{gan}击刑",
-                    "strike": False
-                })
+            # 统计该干支的出现次数
+            gan_count = all_gan_list.count(gan)
+            
+            if gan_count > 0:
+                # 根据出现次数生成对应的标注
+                for _ in range(gan_count):
+                    annotations[target_zhi].append({
+                        "type": "liuji",
+                        "text": f"{gan}击刑",
+                        "strike": False
+                    })
     
     def _analyze_ru_mu_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
                                 di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
@@ -545,8 +585,39 @@ class PaiPanEngine:
                         })
                     
                     processed_rumu = True
+                # 处理击刑的双标注 - 特殊逻辑
+                elif ann_type == "liuji" and type_count[ann_type] >= 2 and not locals().get("processed_liuji", False):
+                    # 收集所有击刑标注，按干支分组
+                    liuji_annotations = [ann for ann in annotation_list if ann["type"] == "liuji"]
+                    gan_count = {}
+                    
+                    # 统计每个干的出现次数
+                    for liuji_ann in liuji_annotations:
+                        gan = liuji_ann["text"].replace("击刑", "")
+                        gan_count[gan] = gan_count.get(gan, 0) + 1
+                    
+                    # 根据每个干的出现次数生成标注
+                    for gan, count in gan_count.items():
+                        if count >= 2:
+                            # 同一个干出现多次，用"双X击刑"
+                            text = f"双{gan}击刑"
+                        else:
+                            # 单个干，用"X击刑"
+                            text = f"{gan}击刑"
+                        
+                        # 检查是否有删除线（继承原标注的strike状态）
+                        has_strike = any(ann["strike"] for ann in liuji_annotations 
+                                       if ann["text"] == f"{gan}击刑")
+                        
+                        new_annotations.append({
+                            "type": ann_type,
+                            "text": text,
+                            "strike": has_strike
+                        })
+                    
+                    locals()["processed_liuji"] = True
                 # 处理其他标注的双标注
-                elif type_count[ann_type] >= 2 and ann_type != "rumu":
+                elif type_count[ann_type] >= 2 and ann_type not in ["rumu", "liuji"]:
                     # 找到同类型的第一个标注
                     if annotation == next(ann for ann in annotation_list if ann["type"] == ann_type):
                         new_annotations.append({
@@ -554,7 +625,7 @@ class PaiPanEngine:
                             "text": f"双{annotation['text']}",
                             "strike": annotation["strike"]
                         })
-                elif ann_type not in ["rikong", "shikong", "rumu"] or (not processed_kong and not processed_rumu):
+                elif ann_type not in ["rikong", "shikong", "rumu", "liuji"] or (not processed_kong and not processed_rumu and not locals().get("processed_liuji", False)):
                     new_annotations.append(annotation)
             
             annotations[di_zhi] = new_annotations

@@ -95,25 +95,29 @@ class DisplayConfig:
     
     def get_parameter_state_color(self, state: str) -> QColor:
         """获取参数状态对应的角标颜色（浅色）"""
-        state_colors = {
-            # 天干长生状态
-            "长生": QColor(46, 125, 50, 100),    # 浅绿色
-            "沐浴": QColor(33, 150, 243, 100),   # 浅蓝色
-            "冠带": QColor(156, 39, 176, 100),   # 浅紫色
-            "临官": QColor(255, 152, 0, 100),    # 浅橙色
-            "帝旺": QColor(244, 67, 54, 100),    # 浅红色
-            "衰": QColor(121, 85, 72, 100),      # 浅棕色
-            "病": QColor(158, 158, 158, 100),    # 浅灰色
-            "死": QColor(96, 125, 139, 100),     # 浅蓝灰色
-            "墓": QColor(55, 71, 79, 100),       # 浅深灰色
-            "绝": QColor(0, 0, 0, 100),          # 浅黑色
-            "胎": QColor(255, 193, 7, 100),      # 浅黄色
-            "养": QColor(76, 175, 80, 100),      # 浅绿色
-            # 八门、九星、八神旺相状态
-            "旺": QColor(244, 67, 54, 120),      # 红色（较深）
-            "相": QColor(255, 152, 0, 120),      # 橙色（较深）
-            "休": QColor(96, 125, 139, 100),     # 蓝灰色
-            "囚": QColor(121, 85, 72, 100),      # 棕色
-            "死": QColor(158, 158, 158, 100),    # 灰色
-        }
+        # 天干十二长生状态 - 按能量强弱分三种颜色
+        strong_changsheng = ["长生", "临官", "帝旺"]          # 能量强 - 红色系
+        medium_changsheng = ["沐浴", "冠带", "胎", "养"]      # 能量一般 - 黄色系
+        weak_changsheng = ["衰", "病", "死", "墓", "绝"]      # 能量差 - 灰色系
+        
+        # 旺相休囚死状态 - 按能量强弱分两种颜色
+        strong_wangxiang = ["旺", "相"]                      # 能量强 - 红色系
+        weak_wangxiang = ["休", "囚", "死", "废"]             # 能量差 - 灰色系
+        
+        state_colors = {}
+        
+        # 天干长生状态颜色配置
+        for s in strong_changsheng:
+            state_colors[s] = QColor(244, 67, 54, 120)       # 红色系（能量强）
+        for s in medium_changsheng:
+            state_colors[s] = QColor(255, 193, 7, 120)       # 黄色系（能量一般）
+        for s in weak_changsheng:
+            state_colors[s] = QColor(96, 125, 139, 100)      # 灰色系（能量差）
+            
+        # 旺相休囚死状态颜色配置
+        for s in strong_wangxiang:
+            state_colors[s] = QColor(244, 67, 54, 120)       # 红色系（能量强）
+        for s in weak_wangxiang:
+            state_colors[s] = QColor(96, 125, 139, 100)      # 灰色系（能量差）
+        
         return state_colors.get(state, QColor(128, 128, 128, 80))  # 默认浅灰色
