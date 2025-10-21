@@ -186,7 +186,7 @@ class ChartDisplayPage(QWidget):
         self.show_shi_kong_cb.toggled.connect(self._on_config_changed)
         visibility_layout.addWidget(self.show_shi_kong_cb, 1, 0)
         
-        self.show_liu_ji_cb = QCheckBox("显示六仪击刑")
+        self.show_liu_ji_cb = QCheckBox("显示六仪六击")
         self.show_liu_ji_cb.toggled.connect(self._on_config_changed)
         visibility_layout.addWidget(self.show_liu_ji_cb, 2, 0)
         
@@ -771,7 +771,7 @@ class AboutPage(QWidget):
         layout.addWidget(app_name_label)
         
         # 版本号
-        version_label = QLabel("版本 v1.2.2")
+        version_label = QLabel("版本 v1.2.3")
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
         

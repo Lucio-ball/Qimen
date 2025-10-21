@@ -20,7 +20,7 @@ class DisplayConfig:
     # 参数显示控制
     show_ri_kong: bool = True  # 显示日空
     show_shi_kong: bool = True  # 显示时空
-    show_liu_ji: bool = True  # 显示六仪击刑
+    show_liu_ji: bool = True  # 显示六仪六击
     show_ru_mu: bool = True  # 显示入墓
     show_ma_xing: bool = True  # 显示马星
     show_yue_ling: bool = True  # 显示月令

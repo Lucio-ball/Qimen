@@ -73,7 +73,7 @@ class AttributePanelWidget(QWidget):
         # 创建参数显示相关的复选框
         self.checkboxes['show_ri_kong'] = QCheckBox("显示日空")
         self.checkboxes['show_shi_kong'] = QCheckBox("显示时空")
-        self.checkboxes['show_liu_ji'] = QCheckBox("显示六仪击刑")
+        self.checkboxes['show_liu_ji'] = QCheckBox("显示六仪六击")
         self.checkboxes['show_ru_mu'] = QCheckBox("显示入墓")
         self.checkboxes['show_ma_xing'] = QCheckBox("显示马星")
         self.checkboxes['show_yue_ling'] = QCheckBox("显示月令")
@@ -172,7 +172,7 @@ def test_config_changed(config: DisplayConfig):
     print(f"参数显示:")
     print(f"  显示日空: {config.show_ri_kong}")
     print(f"  显示时空: {config.show_shi_kong}")
-    print(f"  显示六仪击刑: {config.show_liu_ji}")
+    print(f"  显示六仪六击: {config.show_liu_ji}")
     print(f"  显示入墓: {config.show_ru_mu}")
     print(f"  显示马星: {config.show_ma_xing}")
     print(f"  显示月令: {config.show_yue_ling}")

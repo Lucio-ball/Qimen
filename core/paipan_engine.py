@@ -391,7 +391,7 @@ class PaiPanEngine:
                              tian_pan_stems: List[List[str]]) -> Dict[str, List[Dict[str, Union[str, bool]]]]:
         """
         计算宫侧方自动标注 - 结构化版本
-        返回格式: {"子": [{"type": "liuji", "text": "戊击刑", "strike": False}], ...}
+        返回格式: {"子": [{"type": "liuji", "text": "戊六击", "strike": False}], ...}
         """
         # 初始化标注字典
         annotations = {zhi: [] for zhi in ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]}
@@ -410,8 +410,10 @@ class PaiPanEngine:
     def _analyze_liu_ji_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
                                  di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
         """
-        分析击刑情况 - 结构化版本
+        分析六击情况 - 结构化版本
         精确映射: 戊→卯, 己→未, 庚→寅, 辛→午, 壬→辰, 癸→巳
+        
+        六仪六击的条件：天盘和地盘中都存在该天干（即天地盘同干）
         """
         ji_xing_rules = {
             "戊": (3, "卯"),  # 震3宫 -> 卯位
@@ -422,22 +424,37 @@ class PaiPanEngine:
             "癸": (4, "巳"),  # 巽4宫 -> 巳位
         }
         
-        # 检查天盘干和地盘干是否击刑
+        # 检查天盘干和地盘干是否六击
         for gan, (gong, target_zhi) in ji_xing_rules.items():
-            # 合并天盘干和地盘干
-            all_gan_list = tian_pan_stems[gong] + di_pan_stems[gong]
+            # 统计天盘和地盘中该天干的出现次数
+            tian_pan_count = tian_pan_stems[gong].count(gan)
+            di_pan_count = di_pan_stems[gong].count(gan)
             
-            # 统计该干支的出现次数
-            gan_count = all_gan_list.count(gan)
-            
-            if gan_count > 0:
-                # 根据出现次数生成对应的标注
-                for _ in range(gan_count):
+            # 只有当天盘和地盘中都存在该天干时才标注六击
+            if tian_pan_count > 0 and di_pan_count > 0:
+                # 六击标注次数为天地盘中较小的次数（对应的配对数）
+                ji_xing_count = min(tian_pan_count, di_pan_count)
+                
+                # 判断是否显示"双X六击"：
+                # 当配对数为1且天地盘各只有1个该天干时，显示"双X六击"
+                # 当配对数>=2时，每个配对都显示"X六击"，后续会被合并处理
+                is_single_pair = (ji_xing_count == 1 and tian_pan_count == 1 and di_pan_count == 1)
+                
+                if is_single_pair:
+                    # 天地盘各1个，显示"双X六击"
                     annotations[target_zhi].append({
                         "type": "liuji",
-                        "text": f"{gan}击刑",
+                        "text": f"双{gan}六击",
                         "strike": False
                     })
+                else:
+                    # 其他情况按配对数生成标注
+                    for _ in range(ji_xing_count):
+                        annotations[target_zhi].append({
+                            "type": "liuji",
+                            "text": f"{gan}六击",
+                            "strike": False
+                        })
     
     def _analyze_ru_mu_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
                                 di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
@@ -585,29 +602,29 @@ class PaiPanEngine:
                         })
                     
                     processed_rumu = True
-                # 处理击刑的双标注 - 特殊逻辑
+                # 处理六击的双标注 - 特殊逻辑
                 elif ann_type == "liuji" and type_count[ann_type] >= 2 and not locals().get("processed_liuji", False):
-                    # 收集所有击刑标注，按干支分组
+                    # 收集所有六击标注，按干支分组
                     liuji_annotations = [ann for ann in annotation_list if ann["type"] == "liuji"]
                     gan_count = {}
                     
                     # 统计每个干的出现次数
                     for liuji_ann in liuji_annotations:
-                        gan = liuji_ann["text"].replace("击刑", "")
+                        gan = liuji_ann["text"].replace("六击", "")
                         gan_count[gan] = gan_count.get(gan, 0) + 1
                     
                     # 根据每个干的出现次数生成标注
                     for gan, count in gan_count.items():
                         if count >= 2:
-                            # 同一个干出现多次，用"双X击刑"
-                            text = f"双{gan}击刑"
+                            # 同一个干出现多次，用"双X六击"
+                            text = f"双{gan}六击"
                         else:
-                            # 单个干，用"X击刑"
-                            text = f"{gan}击刑"
+                            # 单个干，用"X六击"
+                            text = f"{gan}六击"
                         
                         # 检查是否有删除线（继承原标注的strike状态）
                         has_strike = any(ann["strike"] for ann in liuji_annotations 
-                                       if ann["text"] == f"{gan}击刑")
+                                       if ann["text"] == f"{gan}六击")
                         
                         new_annotations.append({
                             "type": ann_type,
