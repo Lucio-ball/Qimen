@@ -413,7 +413,12 @@ class PaiPanEngine:
         分析六击情况 - 结构化版本
         精确映射: 戊→卯, 己→未, 庚→寅, 辛→午, 壬→辰, 癸→巳
         
-        六仪六击的条件：天盘和地盘中都存在该天干（即天地盘同干）
+        六仪六击的规则:
+        1. 当天盘和地盘中都存在该天干时(天地盘同干):
+           - 如果天地盘各有1个,显示"双X六击"
+           - 如果有多个配对,按配对数显示多个"X六击"
+        2. 当只有天盘或地盘之一存在该天干时:
+           - 显示"X六击"
         """
         ji_xing_rules = {
             "戊": (3, "卯"),  # 震3宫 -> 卯位
@@ -430,31 +435,39 @@ class PaiPanEngine:
             tian_pan_count = tian_pan_stems[gong].count(gan)
             di_pan_count = di_pan_stems[gong].count(gan)
             
-            # 只有当天盘和地盘中都存在该天干时才标注六击
-            if tian_pan_count > 0 and di_pan_count > 0:
-                # 六击标注次数为天地盘中较小的次数（对应的配对数）
-                ji_xing_count = min(tian_pan_count, di_pan_count)
-                
-                # 判断是否显示"双X六击"：
-                # 当配对数为1且天地盘各只有1个该天干时，显示"双X六击"
-                # 当配对数>=2时，每个配对都显示"X六击"，后续会被合并处理
-                is_single_pair = (ji_xing_count == 1 and tian_pan_count == 1 and di_pan_count == 1)
-                
-                if is_single_pair:
-                    # 天地盘各1个，显示"双X六击"
-                    annotations[target_zhi].append({
-                        "type": "liuji",
-                        "text": f"双{gan}六击",
-                        "strike": False
-                    })
-                else:
-                    # 其他情况按配对数生成标注
-                    for _ in range(ji_xing_count):
+            # 计算该天干在宫位中的总出现次数
+            total_count = tian_pan_count + di_pan_count
+            
+            # 只要天盘或地盘中有该天干就标注六击
+            if total_count > 0:
+                # 判断显示逻辑
+                if tian_pan_count > 0 and di_pan_count > 0:
+                    # 天地盘都有该天干(天地盘同干)
+                    ji_xing_count = min(tian_pan_count, di_pan_count)
+                    is_single_pair = (ji_xing_count == 1 and tian_pan_count == 1 and di_pan_count == 1)
+                    
+                    if is_single_pair:
+                        # 天地盘各1个,显示"双X六击"
                         annotations[target_zhi].append({
                             "type": "liuji",
-                            "text": f"{gan}六击",
+                            "text": f"双{gan}六击",
                             "strike": False
                         })
+                    else:
+                        # 有多个配对,按配对数生成标注
+                        for _ in range(ji_xing_count):
+                            annotations[target_zhi].append({
+                                "type": "liuji",
+                                "text": f"{gan}六击",
+                                "strike": False
+                            })
+                else:
+                    # 只有天盘或地盘之一有该天干,显示"X六击"
+                    annotations[target_zhi].append({
+                        "type": "liuji",
+                        "text": f"{gan}六击",
+                        "strike": False
+                    })
     
     def _analyze_ru_mu_structured(self, annotations: Dict[str, List[Dict[str, Union[str, bool]]]], 
                                 di_pan_stems: List[List[str]], tian_pan_stems: List[List[str]]):
