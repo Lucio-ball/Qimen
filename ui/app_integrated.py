@@ -22,7 +22,7 @@ def run_integrated():
     
     # 设置应用程序属性
     app.setApplicationName("奇门遁甲工作台")
-    app.setApplicationVersion("1.0.0")
+    app.setApplicationVersion("1.2.5")
     app.setOrganizationName("Qimen Workbench Project")
     
     # 实例化集成主窗口

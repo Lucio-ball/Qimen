@@ -113,7 +113,7 @@ class WelcomeWidget(QWidget):
         main_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
         
         # 版本信息
-        version_label = QLabel("版本 v1.2.4 | RELEASE-20251022-001")
+        version_label = QLabel("版本 v1.2.5 | RELEASE-20260119-001")
         version_label.setAlignment(Qt.AlignCenter)
         version_label.setStyleSheet("color: #bdc3c7; font-size: 9px; margin: 10px;")
         main_layout.addWidget(version_label)

@@ -1,58 +1,91 @@
 import datetime
 import ichingpy
+from bisect import bisect_right
 from typing import Dict, List, Tuple
 
-# 2025年二十四节气精确时间（北京时间）
-# 数据来源：中国科学院紫金山天文台
-SOLAR_TERMS_2025 = {
-    "立春": datetime.datetime(2025, 2, 3, 16, 10, 13),
-    "雨水": datetime.datetime(2025, 2, 18, 12, 6, 19),
-    "惊蛰": datetime.datetime(2025, 3, 5, 10, 7, 17),
-    "春分": datetime.datetime(2025, 3, 20, 9, 1, 18),
-    "清明": datetime.datetime(2025, 4, 4, 14, 48, 15),
-    "谷雨": datetime.datetime(2025, 4, 19, 21, 55, 26),
-    "立夏": datetime.datetime(2025, 5, 5, 8, 10, 27),
-    "小满": datetime.datetime(2025, 5, 20, 21, 16, 43),
-    "芒种": datetime.datetime(2025, 6, 5, 12, 34, 25),
-    "夏至": datetime.datetime(2025, 6, 21, 4, 42, 19),
-    "小暑": datetime.datetime(2025, 7, 6, 22, 29, 59),
-    "大暑": datetime.datetime(2025, 7, 22, 15, 29, 53),
-    "立秋": datetime.datetime(2025, 8, 7, 8, 8, 45),
-    "处暑": datetime.datetime(2025, 8, 22, 23, 31, 50),
-    "白露": datetime.datetime(2025, 9, 7, 16, 54, 41),  # 用户提供的精确时间
-    "秋分": datetime.datetime(2025, 9, 23, 2, 19, 38),
-    "寒露": datetime.datetime(2025, 10, 8, 8, 59, 7),
-    "霜降": datetime.datetime(2025, 10, 23, 6, 14, 58),
-    "立冬": datetime.datetime(2025, 11, 7, 0, 19, 59),
-    "小雪": datetime.datetime(2025, 11, 22, 3, 55, 18),
-    "大雪": datetime.datetime(2025, 12, 6, 23, 16, 10),
-    "冬至": datetime.datetime(2025, 12, 21, 16, 2, 48),
-    "小寒": datetime.datetime(2026, 1, 5, 10, 0, 37),
-    "大寒": datetime.datetime(2026, 1, 20, 3, 43, 13),
-}
-
-# 节气名称顺序
-SOLAR_TERMS_ORDER = [
-    "立春", "雨水", "惊蛰", "春分", "清明", "谷雨",
-    "立夏", "小满", "芒种", "夏至", "小暑", "大暑",
-    "立秋", "处暑", "白露", "秋分", "寒露", "霜降",
-    "立冬", "小雪", "大雪", "冬至", "小寒", "大寒",
-]
+try:
+    import sxtwl
+except ModuleNotFoundError as e:  # pragma: no cover
+    raise ModuleNotFoundError(
+        "缺少依赖包 'sxtwl'（节气必须使用天文历算）。请先安装 requirements.txt，"
+        "或使用项目本地虚拟环境 .venv 的解释器运行。"
+    ) from e
 
 _solar_terms_cache = {}
 
 
+# sxtwl.jqIndex -> 节气名称（与 sxtwl 的 24 节气索引一致）
+_JIEQI_NAMES_BY_INDEX = {
+    0: "冬至",
+    1: "小寒",
+    2: "大寒",
+    3: "立春",
+    4: "雨水",
+    5: "惊蛰",
+    6: "春分",
+    7: "清明",
+    8: "谷雨",
+    9: "立夏",
+    10: "小满",
+    11: "芒种",
+    12: "夏至",
+    13: "小暑",
+    14: "大暑",
+    15: "立秋",
+    16: "处暑",
+    17: "白露",
+    18: "秋分",
+    19: "寒露",
+    20: "霜降",
+    21: "立冬",
+    22: "小雪",
+    23: "大雪",
+}
+
+
+def _jd_to_beijing_datetime(jd: float) -> datetime.datetime:
+    """将 sxtwl 的儒略日(JD)转换为北京时间 datetime（四舍五入到秒）。"""
+    t = sxtwl.JD2DD(jd)
+
+    sec_float = float(t.getSec())
+    sec_int = int(sec_float)
+    micro = int(round((sec_float - sec_int) * 1_000_000))
+    if micro >= 1_000_000:
+        # 处理四舍五入导致的进位
+        sec_int += 1
+        micro -= 1_000_000
+
+    base = datetime.datetime(
+        int(t.getYear()),
+        int(t.getMonth()),
+        int(t.getDay()),
+        int(t.getHour()),
+        int(t.getMin()),
+        sec_int,
+        micro,
+    )
+    # 秒级口径：按最近秒取整（满足“到秒”的命理边界要求）
+    base = base + datetime.timedelta(microseconds=500_000)
+    base = base.replace(microsecond=0)
+
+    # sxtwl 输出的 Time 为北京时间口径（UTC+8）
+    return base
+
+
 def _get_year_solar_terms(year: int) -> List[Tuple[str, datetime.datetime]]:
     """获取年份的节气列表"""
-    if year == 2025:
-        # 使用精确数据
-        terms = [(name, SOLAR_TERMS_2025[name]) for name in SOLAR_TERMS_ORDER 
-                 if SOLAR_TERMS_2025[name].year == 2025]
-        return terms
-    else:
-        # 其他年份使用简化算法或返回空（暂时）
-        # TODO: 添加其他年份的支持
-        return []
+    # 使用 sxtwl（天文历算）获取交节时刻；不使用近似公式/固定表。
+    # 注意：sxtwl.getJieQiByYear(year) 返回从当年立春起到次年立春(含)的交节序列（长度通常为25）。
+    terms: List[Tuple[str, datetime.datetime]] = []
+    for info in sxtwl.getJieQiByYear(year):
+        idx = int(info.jqIndex)
+        name = _JIEQI_NAMES_BY_INDEX.get(idx)
+        if not name:
+            # 理论上不会发生；保底避免 KeyError
+            name = f"JQ{idx}"
+        dt = _jd_to_beijing_datetime(float(info.jd))
+        terms.append((name, dt))
+    return terms
 
 
 def get_solar_term(target_dt: datetime.datetime) -> str:
@@ -67,26 +100,38 @@ def get_solar_term(target_dt: datetime.datetime) -> str:
     """
     year = target_dt.year
     
-    # 获取相关年份的节气
-    terms_list = []
-    for y in [year - 1, year, year + 1]:
+    # 获取相关年份的交节序列（包含跨年边界）
+    terms_list: List[Tuple[str, datetime.datetime]] = []
+    for y in (year - 1, year, year + 1):
         cache_key = str(y)
         if cache_key not in _solar_terms_cache:
             _solar_terms_cache[cache_key] = _get_year_solar_terms(y)
         terms_list.extend(_solar_terms_cache[cache_key])
-    
-    # 按时间排序
-    terms_list.sort(key=lambda x: x[1])
-    
-    # 查找当前节气
-    current_term = "春分"  # 默认值
-    for term_name, term_dt in terms_list:
-        if target_dt >= term_dt:
-            current_term = term_name
-        else:
-            break
-    
-    return current_term
+
+    # 去重（跨年份列表会包含同一交节点）
+    seen = set()
+    uniq_terms: List[Tuple[str, datetime.datetime]] = []
+    for name, dt in terms_list:
+        key = (name, dt)
+        if key in seen:
+            continue
+        seen.add(key)
+        uniq_terms.append((name, dt))
+
+    uniq_terms.sort(key=lambda x: x[1])
+    if not uniq_terms:
+        # 理论上不会发生；保底返回与旧逻辑一致的默认值
+        return "春分"
+
+    # 节气判定基于时间区间：上一个交节时刻 ≤ 当前时间 < 下一个交节时刻
+    # 用 bisect_right 确保“交节瞬间”归属新节气。
+    boundaries = [dt for _, dt in uniq_terms]
+    pos = bisect_right(boundaries, target_dt) - 1
+    if pos < 0:
+        # 目标时间早于已加载边界（极少见）；回退到最早边界对应节气
+        pos = 0
+
+    return uniq_terms[pos][0]
 
 
 def get_si_zhu(target_dt: datetime.datetime) -> Dict[str, str]:

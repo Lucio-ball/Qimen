@@ -771,7 +771,7 @@ class AboutPage(QWidget):
         layout.addWidget(app_name_label)
         
         # 版本号
-        version_label = QLabel("版本 v1.2.4")
+        version_label = QLabel("版本 v1.2.5")
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
         
